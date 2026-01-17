@@ -1,6 +1,5 @@
-// NOTE: This file was generated using ChatGPT for testing purposes only
-// Function names (create, findAll, findById, update, updateStatus, delete) will remain the same
-// When integrating Firebase, just replace the implementation inside these functions
+// Temp in-memory store - replace with Firebase later
+// Keep function names the same when migrating
 
 let applications = [];
 let nextId = 1;
