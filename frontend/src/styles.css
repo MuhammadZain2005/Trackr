@@ -33,10 +33,6 @@ body {
     linear-gradient(180deg, #f5f8ff 0%, #e9efff 100%);
 }
 
-[v-cloak] {
-  display: none;
-}
-
 button,
 input,
 select,
