@@ -1,298 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Tracker</title>
     <link rel="stylesheet" href="/src/styles.css">
 </head>
+
 <body>
     <div id="app" v-cloak>
-        <div class="page">
-            <!-- Hero Section -->
-            <div class="hero">
-                <div class="topbar">
-                    <div class="brand">
-                        <div class="logo">
-                            <div class="logo-dot"></div>
-                        </div>
-                        <div class="brand-name">Job Tracker</div>
-                    </div>
-                    <nav class="nav">
-                        <a href="#" class="nav-link is-active">Dashboard</a>
-                        <a href="#" class="nav-link">Applications</a>
-                        <a href="#" class="nav-link">Resume</a>
-                    </nav>
-                    <div class="topbar-actions">
-                        <button class="icon-button" @click="loadSampleData" title="Load Sample Data">
-                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                        </button>
-                    </div>
-                </div>
+        <div class="container">
+            <header class="header">
+                <h1>Job Application Tracker</h1>
+                <p class="subtitle">{{ applications.length }} total applications</p>
+            </header>
 
-                <div class="hero-grid">
-                    <div class="hero-copy">
-                        <p class="kicker">Organized & Efficient</p>
-                        <h1>Track Your Job Search</h1>
-                        <p class="subtitle">Manage applications, follow-ups, and communications in one place. Never miss an opportunity.</p>
-                        <p class="note">{{ activeCount }} active applications • {{ applications.length }} total</p>
-                    </div>
-                </div>
+            <div v-if="error" class="error">{{ error }}</div>
 
-                <div class="hero-search">
-                    <div class="search-pill">
-                        <div class="search-field">
-                            <div class="search-icon">
-                                <svg fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                            </div>
-                            <input 
-                                v-model="searchTerm" 
-                                type="search" 
-                                placeholder="Search by company or position" 
-                            />
-                            <div class="divider"></div>
-                            <select v-model="statusFilter">
-                                <option value="All">All Statuses</option>
-                                <option v-for="status in statuses" :key="status" :value="status">
-                                    {{ status }}
-                                </option>
-                            </select>
-                        </div>
-                        <button class="primary-pill" @click="document.querySelector('.form-section')?.scrollIntoView({behavior: 'smooth'})">
-                            New Application
-                        </button>
-                    </div>
-                </div>
-
-                <div v-if="storageError" class="error">{{ storageError }}</div>
-            </div>
-
-            <!-- Stats -->
             <div class="stats">
-                <div class="stat-card primary">
-                    <p class="stat-label">Active Applications</p>
-                    <div class="stat-value">{{ activeCount }}</div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.applied }}</div>
+                    <div class="stat-label">Applied</div>
                 </div>
                 <div class="stat-card">
-                    <p class="stat-label">Total Applications</p>
-                    <div class="stat-value">{{ applications.length }}</div>
+                    <div class="stat-value">{{ stats.interview }}</div>
+                    <div class="stat-label">Interview</div>
                 </div>
                 <div class="stat-card">
-                    <p class="stat-label">Interviews</p>
-                    <div class="stat-value">{{ stats['Interview'] }}</div>
+                    <div class="stat-value">{{ stats.offer }}</div>
+                    <div class="stat-label">Offers</div>
                 </div>
                 <div class="stat-card">
-                    <p class="stat-label">Offers</p>
-                    <div class="stat-value">{{ stats['Offer'] }}</div>
+                    <div class="stat-value">{{ stats.rejected }}</div>
+                    <div class="stat-label">Rejected</div>
                 </div>
             </div>
 
-            <!-- Main Layout -->
-            <div class="layout">
-                <!-- Add Application Form -->
-                <div class="panel form-section">
-                    <h2>Add New Application</h2>
-                    <div class="form-grid">
-                        <label>
-                            Company
-                            <input v-model="form.company" placeholder="Company name" required />
-                        </label>
-                        <label>
-                            Position
-                            <input v-model="form.position" placeholder="Job title" required />
-                        </label>
-                        <label>
-                            Location
-                            <input v-model="form.location" placeholder="City, Country" />
-                        </label>
-                        <label>
-                            Source
-                            <input v-model="form.source" placeholder="Referral, LinkedIn, etc." />
-                        </label>
-                        <label>
-                            Date Applied
-                            <input v-model="form.dateApplied" type="date" />
-                        </label>
-                        <label>
-                            Follow-up Date
-                            <input v-model="form.followUpDate" type="date" />
-                        </label>
-                        <label>
-                            Status
-                            <select v-model="form.status">
-                                <option v-for="status in statuses" :key="status" :value="status">
-                                    {{ status }}
-                                </option>
-                            </select>
-                        </label>
-                        <label>
-                            Priority
-                            <select v-model="form.priority">
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                            </select>
-                        </label>
-                        <label class="checkbox">
-                            <input v-model="form.useMasterResume" type="checkbox" />
-                            Use master resume
-                        </label>
-                    </div>
-                    <label>
-                        Notes
-                        <textarea v-model="form.notes" placeholder="Add any notes..."></textarea>
-                    </label>
-                    <button @click="addApplication">Add Application</button>
+            <div class="form-section">
+                <h2>Add New Application</h2>
+                <div class="form-grid">
+                    <input v-model="form.companyName" placeholder="Company Name" required />
+                    <input v-model="form.position" placeholder="Position" required />
+                    <input v-model="form.location" placeholder="Location" />
+                    <input v-model="form.dateApplied" type="date" />
+                    <select v-model="form.status">
+                        <option value="saved">Saved</option>
+                        <option value="applied">Applied</option>
+                        <option value="interview">Interview</option>
+                        <option value="offer">Offer</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                    <select v-model="form.priority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
                 </div>
+                <textarea v-model="form.notes" placeholder="Notes" rows="3"></textarea>
+                <button @click="addApplication" :disabled="loading">
+                    {{ loading ? 'Adding...' : 'Add Application' }}
+                </button>
+            </div>
 
-                <!-- Master Resume -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2>Master Resume</h2>
-                        <button class="ghost" @click="copyMasterResume">
-                            {{ copyMessage || 'Copy' }}
+            <div class="search-section">
+                <input v-model="searchTerm" type="search" placeholder="Search companies or positions..." />
+                <select v-model="statusFilter">
+                    <option value="All">All Statuses</option>
+                    <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
+                </select>
+            </div>
+
+            <div class="applications">
+                <div v-if="filteredApplications.length === 0" class="empty">
+                    No applications found. Add one to get started!
+                </div>
+                <div v-for="app in filteredApplications" :key="app.id" class="app-card">
+                    <div class="app-header">
+                        <div>
+                            <h3>{{ app.companyName }}</h3>
+                            <p class="position">{{ app.position }}</p>
+                        </div>
+                        <span class="badge" :class="'badge-' + app.status">{{ app.status }}</span>
+                    </div>
+                    <div class="app-body">
+                        <p v-if="app.location"><strong>Location:</strong> {{ app.location }}</p>
+                        <p><strong>Applied:</strong> {{ formatDate(app.dateApplied) }}</p>
+                        <p v-if="app.notes" class="notes">{{ app.notes }}</p>
+                    </div>
+                    <div class="app-actions">
+                        <button class="btn-danger" @click="deleteApplication(app.id)" :disabled="loading">
+                            Delete
                         </button>
                     </div>
-                    <textarea v-model="masterResume" class="resume-textarea"></textarea>
                 </div>
-
-                <!-- Reminders -->
-                <div class="panel span-2">
-                    <h2>Upcoming Follow-ups</h2>
-                    <div v-if="reminders.length === 0" class="empty-state">
-                        No follow-ups scheduled
-                    </div>
-                    <div v-else class="reminders">
-                        <div v-for="app in reminders" :key="app.id" class="reminder-card">
-                            <div>
-                                <h4 class="reminder-title">{{ app.company }} - {{ app.position }}</h4>
-                                <p class="muted">{{ app.location }}</p>
-                            </div>
-                            <span class="pill" :class="dueClass(app.followUpDate)">
-                                {{ dueLabel(app.followUpDate) }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Applications Board -->
-            <div class="panel span-2">
-                <div class="panel-header">
-                    <h2>Applications</h2>
-                    <div class="panel-actions">
-                        <select v-model="sortBy">
-                            <option value="updated">Recently Updated</option>
-                            <option value="dateApplied">Date Applied</option>
-                            <option value="followUp">Follow-up Date</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div v-if="sortedApplications.length === 0" class="empty-state">
-                    No applications yet. Add one to get started!
-                </div>
-
-                <div v-else class="board">
-                    <div v-for="status in statuses" :key="status" class="column">
-                        <div class="column-header">
-                            <h4>{{ status }}</h4>
-                            <span>{{ bucketed[status].length }}</span>
-                        </div>
-
-                        <div v-for="app in bucketed[status]" :key="app.id" class="card">
-                            <div class="card-head">
-                                <div>
-                                    <h4>{{ app.company }}</h4>
-                                    <p class="muted">{{ app.position }}</p>
-                                </div>
-                                <span class="pill" :class="'priority-' + app.priority.toLowerCase()">
-                                    {{ app.priority }}
-                                </span>
-                            </div>
-
-                            <div class="card-body">
-                                <p><strong>Location:</strong> {{ app.location }}</p>
-                                <p><strong>Source:</strong> {{ app.source }}</p>
-                                <p><strong>Applied:</strong> {{ formatDate(app.dateApplied) }}</p>
-                                <p v-if="app.followUpDate">
-                                    <strong>Follow-up:</strong> 
-                                    <span class="pill" :class="dueClass(app.followUpDate)">
-                                        {{ formatDate(app.followUpDate) }}
-                                    </span>
-                                </p>
-                            </div>
-
-                            <div v-if="app.notes" class="notes">{{ app.notes }}</div>
-
-                            <!-- Communications -->
-                            <div v-if="app.communications.length > 0">
-                                <ul class="comm-list">
-                                    <li v-for="comm in app.communications" :key="comm.id">
-                                        <p class="comm-title">{{ comm.type }} - {{ formatDate(comm.date) }}</p>
-                                        <p class="comm-summary">{{ comm.summary }}</p>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <!-- Add Communication (Fixed) -->
-                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.35);">
-                                <p style="margin: 0 0 12px; font-weight: 600; cursor: pointer; color: var(--primary);" @click="communicationDrafts[app.id]._open = !communicationDrafts[app.id]._open">
-                                    {{ communicationDrafts[app.id]._open ? '− Hide' : '+ Add Communication' }}
-                                </p>
-                                <div v-if="communicationDrafts[app.id]._open" class="details-grid" style="margin-bottom: 12px;">
-                                    <input 
-                                        v-model="communicationDrafts[app.id].date" 
-                                        type="date"
-                                    />
-                                    <select v-model="communicationDrafts[app.id].type">
-                                        <option>Email</option>
-                                        <option>Phone</option>
-                                        <option>Interview</option>
-                                        <option>Offer</option>
-                                        <option>Other</option>
-                                    </select>
-                                    <textarea 
-                                        v-model="communicationDrafts[app.id].summary"
-                                        placeholder="Communication summary"
-                                        style="grid-column: 1 / -1; margin: 0 0 10px 0;"
-                                    ></textarea>
-                                    <button @click="addCommunication(app)" style="grid-column: 1 / -1;">Add Communication</button>
-                                </div>
-                            </div>
-
-                            <!-- Tailored Resume (Fixed) -->
-                            <details v-if="app.tailoredResume" class="details" style="margin-top: 12px;">
-                                <summary>Tailored Resume</summary>
-                                <pre style="margin-top: 12px;">{{ app.tailoredResume }}</pre>
-                                <button class="danger" @click="clearTailored(app)" style="margin-top: 10px;">Clear</button>
-                            </details>
-
-                            <!-- Actions -->
-                            <div class="card-actions">
-                                <button v-if="!app.tailoredResume" class="ghost" @click="useMaster(app)">
-                                    Use Master Resume
-                                </button>
-                                <button class="ghost" @click="toggleArchive(app)">
-                                    {{ app.archived ? 'Restore' : 'Archive' }}
-                                </button>
-                                <button class="danger" @click="removeApplication(app.id)">
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer Actions -->
-            <div class="footer">
-                <button class="ghost" @click="loadSampleData">Load Sample Data</button>
-                <button class="danger" @click="clearAll">Clear All</button>
             </div>
         </div>
     </div>
 
     <script type="module" src="/src/main.jsx"></script>
 </body>
+
 </html>
