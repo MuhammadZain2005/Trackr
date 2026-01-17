@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Application Organizer</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script defer src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <div id="app" class="page" v-cloak>
+      <header class="hero">
+        <div class="topbar">
+          <div class="brand">
+            <div class="logo" aria-hidden="true">
+              <span class="logo-dot"></span>
+            </div>
+            <span class="brand-name">JobTracker</span>
+          </div>
+
+          <nav class="nav">
+            <a href="#applications" class="nav-link is-active">Applications</a>
+            <a href="#resume" class="nav-link">Resumes</a>
+            <a href="#reminders" class="nav-link">Reminders</a>
+          </nav>
+
+          <div class="topbar-actions">
+            <button class="icon-button" type="button" aria-label="Notifications">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+                <path d="M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
+            </button>
+            <div class="avatar" title="Local profile" aria-label="Local profile">
+              <span>PC</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="kicker">Winter 2026 Hackathon</p>
+            <h1>Track every application in one place</h1>
+            <p class="subtitle">
+              Log applications, tailor resumes, and keep follow-ups organized
+              without a complicated system.
+            </p>
+            <p class="note">Personal tracker only — stored locally in your browser.</p>
+          </div>
+
+          <div class="hero-actions">
+            <button class="ghost" type="button" @click="loadSampleData">
+              Load sample data
+            </button>
+            <button class="ghost danger" type="button" @click="clearAll">
+              Clear all
+            </button>
+          </div>
+        </div>
+
+        <div class="hero-search">
+          <div class="search-pill">
+            <div class="search-field">
+              <span class="search-icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="M21 21l-4.3-4.3"></path>
+                </svg>
+              </span>
+              <input
+                v-model.trim="searchTerm"
+                type="search"
+                placeholder="Search company or role"
+              />
+            </div>
+            <div class="divider" aria-hidden="true"></div>
+            <div class="search-field">
+              <span class="search-icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 10c0 6-8 13-8 13S4 16 4 10a8 8 0 0116 0Z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+              </span>
+              <select v-model="statusFilter" aria-label="Status filter">
+                <option value="All">All statuses</option>
+                <option v-for="status in statuses" :key="status" :value="status">
+                  {{ status }}
+                </option>
+              </select>
+            </div>
+            <button class="primary-pill" type="button" @click="() => {}">
+              Search
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section class="stats">
+        <div class="stat-card primary">
+          <p class="stat-label">Active</p>
+          <p class="stat-value">{{ activeCount }}</p>
+        </div>
+        <div class="stat-card" v-for="status in statuses" :key="status">
+          <p class="stat-label">{{ status }}</p>
+          <p class="stat-value">{{ stats[status] }}</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Follow-ups due</p>
+          <p class="stat-value">{{ reminders.length }}</p>
+        </div>
+      </section>
+
+      <main class="layout">
+        <section class="panel" id="applications">
+          <h2>Track an application</h2>
+          <form class="form-grid" @submit.prevent="addApplication">
+            <label>
+              Company
+              <input
+                v-model.trim="form.company"
+                type="text"
+                placeholder="Northwind Labs"
+                required
+              />
+            </label>
+            <label>
+              Role
+              <input
+                v-model.trim="form.position"
+                type="text"
+                placeholder="Product Analyst"
+                required
+              />
+            </label>
+            <label>
+              Location
+              <input
+                v-model.trim="form.location"
+                type="text"
+                placeholder="Remote or City"
+              />
+            </label>
+            <label>
+              Source
+              <input
+                v-model.trim="form.source"
+                type="text"
+                placeholder="LinkedIn, Referral"
+              />
+            </label>
+            <label>
+              Date applied
+              <input v-model="form.dateApplied" type="date" required />
+            </label>
+            <label>
+              Follow-up date
+              <input v-model="form.followUpDate" type="date" />
+            </label>
+            <label>
+              Status
+              <select v-model="form.status">
+                <option v-for="status in statuses" :key="status" :value="status">
+                  {{ status }}
+                </option>
+              </select>
+            </label>
+            <label>
+              Priority
+              <select v-model="form.priority">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </label>
+            <label class="span-2">
+              Notes
+              <textarea
+                v-model.trim="form.notes"
+                rows="3"
+                placeholder="Key requirements, recruiter info, next steps."
+              ></textarea>
+            </label>
+            <label class="span-2 checkbox">
+              <input v-model="form.useMasterResume" type="checkbox" />
+              Start tailored resume from the master version
+            </label>
+            <div class="row span-2">
+              <button type="submit">Add application</button>
+              <button class="ghost" type="button" @click="resetForm">
+                Reset
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel" id="resume">
+          <div class="panel-header">
+            <h2>Master resume</h2>
+            <div class="panel-actions">
+              <button class="ghost" type="button" @click="copyMasterResume">
+                Copy
+              </button>
+            </div>
+          </div>
+          <textarea
+            v-model="masterResume"
+            rows="16"
+            placeholder="Paste your master resume here."
+          ></textarea>
+          <p class="hint">
+            Use the master resume as the base for quick edits per application.
+          </p>
+          <p v-if="copyMessage" class="hint">{{ copyMessage }}</p>
+          <p v-if="storageError" class="error">{{ storageError }}</p>
+        </section>
+
+        <section class="panel span-2" id="reminders">
+          <div class="panel-header">
+            <h2>Reminders and follow-ups</h2>
+            <div class="panel-actions">
+              <label class="inline-input">
+                Remind within
+                <input
+                  v-model.number="remindersWindow"
+                  min="1"
+                  max="30"
+                  type="number"
+                />
+                days
+              </label>
+            </div>
+          </div>
+          <div class="reminders">
+            <div v-if="reminders.length === 0" class="empty-state">
+              No follow-ups due soon. Nice work staying ahead!
+            </div>
+            <div
+              v-for="reminder in reminders"
+              :key="reminder.id"
+              class="reminder-card"
+            >
+              <div>
+                <p class="reminder-title">
+                  {{ reminder.company }} · {{ reminder.position }}
+                </p>
+                <p class="muted">
+                  Follow-up {{ formatDate(reminder.followUpDate) }}
+                </p>
+              </div>
+              <span class="pill" :class="dueClass(reminder.followUpDate)">
+                {{ dueLabel(reminder.followUpDate) }}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel span-2">
+          <div class="panel-header">
+            <h2>Application tracker</h2>
+            <div class="panel-actions filters">
+              <select v-model="statusFilter">
+                <option value="All">All statuses</option>
+                <option v-for="status in statuses" :key="status" :value="status">
+                  {{ status }}
+                </option>
+              </select>
+              <select v-model="sortBy">
+                <option value="updated">Recently updated</option>
+                <option value="dateApplied">Date applied</option>
+                <option value="followUp">Follow-up date</option>
+              </select>
+              <label class="inline-input">
+                <input v-model="showArchived" type="checkbox" />
+                Show archived
+              </label>
+            </div>
+          </div>
+
+          <div class="board">
+            <div class="column" v-for="status in statuses" :key="status">
+              <div class="column-header">
+                <h3>{{ status }}</h3>
+                <span class="pill">{{ bucketed[status].length }}</span>
+              </div>
+              <div
+                v-if="bucketed[status].length === 0"
+                class="empty-state"
+              >
+                No applications in this stage yet.
+              </div>
+              <div
+                v-for="application in bucketed[status]"
+                :key="application.id"
+                class="card"
+              >
+                <div class="card-head">
+                  <div>
+                    <h4>{{ application.company }}</h4>
+                    <p class="muted">{{ application.position }}</p>
+                  </div>
+                  <select
+                    v-model="application.status"
+                    @change="touch(application)"
+                  >
+                    <option
+                      v-for="statusOption in statuses"
+                      :key="statusOption"
+                      :value="statusOption"
+                    >
+                      {{ statusOption }}
+                    </option>
+                  </select>
+                </div>
+                <div class="card-body">
+                  <p>
+                    <strong>Applied:</strong>
+                    {{ formatDate(application.dateApplied) }}
+                  </p>
+                  <p>
+                    <strong>Follow-up:</strong>
+                    <span
+                      :class="['pill', dueClass(application.followUpDate)]"
+                    >
+                      {{ application.followUpDate
+                        ? formatDate(application.followUpDate)
+                        : 'Not set' }}
+                    </span>
+                  </p>
+                  <p class="muted">
+                    {{ application.location || 'Location TBD' }} ·
+                    {{ application.source || 'Source TBD' }}
+                  </p>
+                  <p v-if="application.notes" class="notes">
+                    {{ application.notes }}
+                  </p>
+                  <div class="tags">
+                    <span class="tag" :class="priorityClass(application.priority)"
+                      >Priority: {{ application.priority }}</span
+                    >
+                    <span class="tag"
+                      >Responses: {{ application.communications.length }}</span
+                    >
+                    <span v-if="application.archived" class="tag">Archived</span>
+                  </div>
+                </div>
+                <details class="details">
+                  <summary>Details, resumes, and responses</summary>
+                  <div class="details-grid">
+                    <div>
+                      <h5>Tailored resume</h5>
+                      <textarea
+                        v-model="application.tailoredResume"
+                        rows="8"
+                        @input="touch(application)"
+                        placeholder="Start from master resume or add tailored notes."
+                      ></textarea>
+                      <div class="row">
+                        <button type="button" @click="useMaster(application)">
+                          Use master
+                        </button>
+                        <button
+                          class="ghost"
+                          type="button"
+                          @click="clearTailored(application)"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <h5>Communication log</h5>
+                      <ul class="comm-list">
+                        <li
+                          v-if="application.communications.length === 0"
+                          class="muted"
+                        >
+                          No communications logged yet.
+                        </li>
+                        <li
+                          v-for="entry in application.communications"
+                          :key="entry.id"
+                        >
+                          <p class="comm-title">
+                            {{ entry.type }} · {{ formatDate(entry.date) }}
+                          </p>
+                          <p class="comm-summary">{{ entry.summary }}</p>
+                        </li>
+                      </ul>
+                      <form
+                        class="comm-form"
+                        @submit.prevent="addCommunication(application)"
+                      >
+                        <div class="row">
+                          <input
+                            v-model="communicationDrafts[application.id].date"
+                            type="date"
+                            required
+                          />
+                          <select
+                            v-model="communicationDrafts[application.id].type"
+                          >
+                            <option>Email</option>
+                            <option>Phone</option>
+                            <option>Interview</option>
+                            <option>Offer</option>
+                            <option>Rejection</option>
+                            <option>Other</option>
+                          </select>
+                        </div>
+                        <textarea
+                          v-model.trim="
+                            communicationDrafts[application.id].summary
+                          "
+                          rows="3"
+                          placeholder="Summary of the conversation"
+                          required
+                        ></textarea>
+                        <button type="submit">Add entry</button>
+                      </form>
+                    </div>
+                  </div>
+                </details>
+                <div class="card-actions">
+                  <button
+                    class="ghost"
+                    type="button"
+                    @click="toggleArchive(application)"
+                  >
+                    {{ application.archived ? 'Restore' : 'Archive' }}
+                  </button>
+                  <button
+                    class="ghost danger"
+                    type="button"
+                    @click="removeApplication(application.id)"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>
+          Built for the Winter 2026 Hackathon · Save your data locally in the
+          browser.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
