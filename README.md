@@ -9,3 +9,8 @@ personal CRM for job hunting
 -
 -
 
+
+To load the frontend :-
+python3 -m http.server 8000
+and then open :
+http://localhost:8000
