@@ -19,3 +19,7 @@ logs/
 # build output (if you add later)
 dist/
 build/
+
+# test scripts
+test-*.sh
+server.log
