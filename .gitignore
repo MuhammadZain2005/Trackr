@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# env files
+.env
+.env.*
+
+# mac
+.DS_Store
+**/.DS_Store
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# build output (if you add later)
+dist/
+build/
+
+# test scripts
+test-*.sh
+server.log
