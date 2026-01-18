@@ -270,6 +270,44 @@
     </div>
   </div>
 
+  <!-- OFFLINE AI Resume Assistant (100% Local - No Internet!) -->
+  <div id="aiChatWidget" class="ai-chat-widget">
+    <div class="ai-chat-container">
+      <div class="ai-chat-header">
+        <div class="ai-chat-header-left">
+          <div class="ai-chat-avatar">💡</div>
+          <div>
+            <h3 class="ai-chat-title">Resume Assistant</h3>
+            <p class="ai-chat-status">Offline • 100% Local</p>
+          </div>
+        </div>
+        <div class="ai-chat-header-actions">
+          <button id="aiChatMinimize" class="ai-chat-icon-btn" title="Minimize">−</button>
+          <button id="aiChatClose" class="ai-chat-icon-btn" title="Close">×</button>
+        </div>
+      </div>
+
+      <div class="ai-quick-actions">
+        <button class="ai-quick-action" data-action="tailor">📝 Tailor Resume</button>
+        <button class="ai-quick-action" data-action="cover-letter">✉️ Cover Letter</button>
+        <button class="ai-quick-action" data-action="suggestions">💡 Get Suggestions</button>
+      </div>
+
+      <div id="aiChatMessages" class="ai-chat-messages"></div>
+
+      <div class="ai-chat-input-container">
+        <button id="aiChatClear" class="ai-chat-clear-btn" title="Clear chat">🗑️</button>
+        <textarea id="aiChatInput" class="ai-chat-input" placeholder="Ask about resumes, cover letters, formatting..." rows="1"></textarea>
+        <button id="aiChatSend" class="ai-chat-send-btn">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <button id="aiChatToggle" class="ai-chat-toggle" title="Resume Assistant (Offline)">
+    <span class="ai-toggle-icon">💡</span>
+    <span class="ai-chat-badge">AI</span>
+  </button>
+
   <script type="module" src="/src/services/resumes.js"></script>
 </body>
 </html>

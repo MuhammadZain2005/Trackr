@@ -6,6 +6,14 @@ const notFound = require('./middlewares/notFoundMiddleware');
 const errorHandler = require('./middlewares/errorMiddleware');
 const healthController = require('./controllers/healthController');
 
+
+
+app.use(cors({
+  origin: 'http://localhost:5174',
+  credentials: true
+}));
+
+
 const app = express();
 
 app.use(cors());

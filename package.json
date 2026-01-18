@@ -1,4 +1,6 @@
 {
+  "dependencies": {
+    "latex.js": "^0.12.6"
   "name": "trackr-fullstack",
   "version": "1.0.0",
   "description": "Job Tracker Full Stack Application",
