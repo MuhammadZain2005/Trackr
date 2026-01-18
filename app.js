@@ -22,6 +22,47 @@ Skills
 - Interview scheduling
 - Talent pipeline reporting`;
 
+// ✅ Seed PDFs so folders aren’t empty by default
+// NOTE: these are sample links (must end with .pdf). Replace with your own URLs anytime.
+const sampleFolderPdfs = {
+  master: [
+    {
+      id: createId(),
+      name: "Master Resume — v1.pdf",
+      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      addedAt: Date.now() - 1000 * 60 * 60 * 24 * 30,
+    },
+  ],
+  swe: [
+    {
+      id: createId(),
+      name: "SWE Resume — v1.pdf",
+      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      addedAt: Date.now() - 1000 * 60 * 60 * 24 * 10,
+    },
+    {
+      id: createId(),
+      name: "SWE Resume — v2 (ATS tweaks).pdf",
+      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      addedAt: Date.now() - 1000 * 60 * 60 * 24 * 6,
+    },
+  ],
+  data: [
+    {
+      id: createId(),
+      name: "Data Science Resume — v1.pdf",
+      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      addedAt: Date.now() - 1000 * 60 * 60 * 24 * 12,
+    },
+    {
+      id: createId(),
+      name: "Data Science Resume — v2 (projects).pdf",
+      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      addedAt: Date.now() - 1000 * 60 * 60 * 24 * 4,
+    },
+  ],
+};
+
 const sampleApplications = [
   {
     id: createId(),
@@ -87,6 +128,8 @@ const sampleApplications = [
   },
 ];
 
+const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
+
 const app = Vue.createApp({
   data() {
     return {
@@ -95,7 +138,7 @@ const app = Vue.createApp({
       applications: [],
 
       // Folder PDFs (pdf-only)
-      folderPdfs: { master: [], swe: [], data: [] },
+      folderPdfs: deepCopy(sampleFolderPdfs),
       showFolderModal: false,
       activeFolder: null,
       pdfDraftName: "",
@@ -251,7 +294,7 @@ const app = Vue.createApp({
           // defaults
           this.masterResume = defaultMasterResume;
           this.applications = [];
-          this.folderPdfs = { master: [], swe: [], data: [] };
+          this.folderPdfs = deepCopy(sampleFolderPdfs); // ✅ seed folders
           return;
         }
 
@@ -262,7 +305,7 @@ const app = Vue.createApp({
           ? parsed.applications.map(this.normalizeApplication)
           : [];
 
-        this.folderPdfs = parsed.folderPdfs || { master: [], swe: [], data: [] };
+        this.folderPdfs = parsed.folderPdfs || deepCopy(sampleFolderPdfs);
 
         this.applications.forEach((a) => this.ensureDraft(a.id));
       } catch (e) {
@@ -366,6 +409,10 @@ const app = Vue.createApp({
       }
       this.applications = sampleApplications.map(this.normalizeApplication);
       this.applications.forEach((a) => this.ensureDraft(a.id));
+
+      // ✅ also seed folder PDFs when loading sample data
+      this.folderPdfs = deepCopy(sampleFolderPdfs);
+
       this.persistState();
     },
 
