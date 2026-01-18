@@ -191,9 +191,3 @@ git push origin feature/your-feature
 This project is licensed under the [MIT License](LICENSE).
 
 ---
-
-If you'd like, I can:
-- Add a `.env.example` file and a `backend/src/config/firebase.js` starter file.
-- Add badges (build, coverage) and screenshots to the README.
-
-Ready to commit this README and push to `firebase_connection` when you say "go".
