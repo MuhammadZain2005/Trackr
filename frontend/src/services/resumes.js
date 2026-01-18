@@ -70,6 +70,67 @@ function saveToLocalStorage(tracks) {
   }
 }
 
+// ============ GLOBAL FUNCTIONS FOR PDF/DOWNLOAD (100% Offline) ============
+window.downloadTexFile = function() {
+  const content = window.currentLatexContent;
+  if (!content) {
+    alert("No LaTeX content to download");
+    return;
+  }
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'resume.tex';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+window.openInOverleaf = function() {
+  const content = window.currentLatexContent;
+  if (!content) {
+    alert("No LaTeX content available");
+    return;
+  }
+  // Create a form to POST to Overleaf
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = 'https://www.overleaf.com/docs';
+  form.target = '_blank';
+  
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'snip';
+  input.value = content;
+  
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+};
+
+window.copyLatexToClipboard = function() {
+  const content = window.currentLatexContent;
+  if (!content) {
+    alert("No LaTeX content to copy");
+    return;
+  }
+  navigator.clipboard.writeText(content).then(() => {
+    alert("LaTeX code copied to clipboard!");
+  }).catch(() => {
+    // Fallback for older browsers
+    const textarea = document.createElement('textarea');
+    textarea.value = content;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    alert("LaTeX code copied to clipboard!");
+  });
+};
+
 // ============ EDITOR SETUP (Simple Textarea) ============
 let editor = null;
 
@@ -402,11 +463,6 @@ async function handleSaveDraft() {
 }
 
 async function handleBuildPdf() {
-  if (!CURRENT_UID || !CURRENT_TRACK) {
-    alert("Not signed in or no track selected.");
-    return;
-  }
-
   const content = getEditorContent();
   if (!content.trim()) {
     alert("Editor is empty. Add LaTeX content first.");
@@ -414,40 +470,37 @@ async function handleBuildPdf() {
   }
 
   try {
-    setBuildStatus("building", "Compiling LaTeX…");
+    setBuildStatus("building", "Preparing LaTeX…");
     hideError();
 
-    // Send to backend for compilation
-    const response = await fetch('/api/compile-latex', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        latexCode: content
-      })
-    });
+    // Store content for download
+    window.currentLatexContent = content;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.details || errorData.error || 'Compilation failed');
-    }
-
-    // Get PDF blob
-    const pdfBlob = await response.blob();
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-
-    // Store for download
-    window.currentPdfUrl = pdfUrl;
-    window.currentPdfBlob = pdfBlob;
-
-    // Show PDF in iframe
+    // Create a nice preview with download options (works 100% offline!)
     elPreviewContent.innerHTML = `
-      <iframe 
-        src="${pdfUrl}" 
-        style="width: 100%; height: 100%; border: none; border-radius: 8px;"
-        title="PDF Preview">
-      </iframe>
+      <div style="padding: 24px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%); border-radius: 12px;">
+        <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+        <h3 style="color: #166534; margin: 0 0 8px 0; font-size: 20px;">LaTeX Ready!</h3>
+        <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 14px;">Your resume is saved. Choose an option below:</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 280px;">
+          <button onclick="downloadTexFile()" style="padding: 12px 20px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            📄 Download .tex File
+          </button>
+          
+          <button onclick="openInOverleaf()" style="padding: 12px 20px; background: #047857; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            🌐 Open in Overleaf
+          </button>
+          
+          <button onclick="copyLatexToClipboard()" style="padding: 12px 20px; background: white; color: #374151; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            📋 Copy LaTeX Code
+          </button>
+        </div>
+        
+        <p style="color: #6b7280; margin: 20px 0 0 0; font-size: 12px; max-width: 300px;">
+          💡 Tip: Use Overleaf.com for free online PDF compilation, or install LaTeX locally (MacTeX/MiKTeX).
+        </p>
+      </div>
     `;
 
     btnDownloadPdf.disabled = false;
