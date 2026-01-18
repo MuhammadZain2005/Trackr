@@ -129,11 +129,20 @@
       </div>
 
       <!-- Applications Board -->
-      <div class="panel span-2">
-        <div class="panel-header">
-          <h2>Applications</h2>
-          <div class="panel-actions">
-            <select v-model="sortBy">
+      <div class="panel span-2 kanban-panel">
+        <div class="kanban-header">
+          <div class="kanban-header-left">
+            <h2>Applications</h2>
+            <p class="kanban-subtext">{{ activeCount }} active · {{ nextFollowUpText }}</p>
+          </div>
+          <div class="kanban-header-right">
+            <div class="kanban-search">
+              <svg class="kanban-search-icon" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+              </svg>
+              <input v-model="searchTerm" type="search" placeholder="Search company or role..." />
+            </div>
+            <select v-model="sortBy" class="kanban-sort">
               <option value="updated">Recently Updated</option>
               <option value="dateApplied">Date Applied</option>
               <option value="followUp">Follow-up Date</option>
@@ -145,99 +154,142 @@
           No applications yet. Add one to get started!
         </div>
 
-        <div v-else class="board">
-          <!-- Removed Saved column -->
-          <div v-for="status in statuses.filter(s => s !== 'Saved')" :key="status" class="column">
-            <div class="column-header">
+        <div v-else class="kanban-board">
+          <div
+            v-for="status in statuses.filter(s => s !== 'Saved')"
+            :key="status"
+            class="kanban-column"
+            @dragover.prevent
+            @dragenter.prevent="dragEnterColumn($event)"
+            @dragleave="dragLeaveColumn($event)"
+            @drop="dropCard($event, status)"
+          >
+            <div class="kanban-column-header">
               <h4>{{ status }}</h4>
-              <span>{{ bucketed[status].length }}</span>
+              <span class="kanban-column-count">{{ bucketed[status].length }}</span>
             </div>
 
-            <div v-for="app in bucketed[status]" :key="app.id" class="card">
-              <div class="card-head">
-                <div>
-                  <h4>{{ app.company }}</h4>
-                  <p class="muted">{{ app.position }}</p>
-                </div>
-                <span class="pill" :class="'priority-' + app.priority.toLowerCase()">
-                  {{ app.priority }}
-                </span>
-              </div>
-
-              <!-- SIMPLIFIED INFO -->
-              <div class="card-meta">
-                <div class="meta-line">
-                  <span class="meta-item">{{ app.location || '—' }}</span>
-                  <span class="meta-dot">•</span>
-                  <span class="meta-item">Applied {{ formatDate(app.dateApplied) }}</span>
-                </div>
-
-                <div v-if="app.followUpDate" class="meta-line">
-                  <span class="meta-label">Follow-up</span>
-                  <span class="pill" :class="dueClass(app.followUpDate)">
-                    {{ formatDate(app.followUpDate) }}
-                  </span>
-                </div>
-
-                <div v-if="app.communications.length" class="meta-line">
-                  <span class="meta-label">Comms</span>
-                  <span class="meta-item">{{ app.communications.length }} logged</span>
-                </div>
-
-                <div v-if="app.notes" class="meta-line">
-                  <span class="meta-label">Note</span>
-                  <span class="meta-item">{{ app.notes }}</span>
-                </div>
-              </div>
-
-              <!-- Add Communication -->
+            <div class="kanban-column-cards">
               <div
-                style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.35);"
+                v-for="app in bucketed[status]"
+                :key="app.id"
+                class="kanban-card"
+                draggable="true"
+                @dragstart="dragStart($event, app)"
+                @dragend="dragEnd($event)"
               >
-                <p
-                  style="margin: 0 0 12px; font-weight: 600; cursor: pointer; color: var(--primary);"
-                  @click="communicationDrafts[app.id]._open = !communicationDrafts[app.id]._open"
-                >
-                  {{ communicationDrafts[app.id]._open ? '− Hide' : '+ Add Communication' }}
-                </p>
-
-                <div v-if="communicationDrafts[app.id]._open" class="details-grid" style="margin-bottom: 12px;">
-                  <input v-model="communicationDrafts[app.id].date" type="date" />
-                  <select v-model="communicationDrafts[app.id].type">
-                    <option>Email</option>
-                    <option>Phone</option>
-                    <option>Interview</option>
-                    <option>Offer</option>
-                    <option>Other</option>
-                  </select>
-                  <textarea
-                    v-model="communicationDrafts[app.id].summary"
-                    placeholder="Communication summary"
-                    style="grid-column: 1 / -1; margin: 0 0 10px 0;"
-                  ></textarea>
-                  <button @click="addCommunication(app)" style="grid-column: 1 / -1;">Add Communication</button>
+                <!-- Card Header -->
+                <div class="kanban-card-header">
+                  <div class="kanban-card-title">
+                    <h4>{{ app.company }}</h4>
+                    <p>{{ app.position }}</p>
+                  </div>
+                  <div class="kanban-card-actions">
+                    <span class="priority-dot" :class="'priority-dot-' + app.priority.toLowerCase()" :title="app.priority + ' priority'"></span>
+                    <div class="kebab-menu">
+                      <button class="kebab-trigger" @click.stop="toggleMenu(app.id)" title="More actions">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="12" cy="5" r="2"/>
+                          <circle cx="12" cy="12" r="2"/>
+                          <circle cx="12" cy="19" r="2"/>
+                        </svg>
+                      </button>
+                      <div v-if="openMenuId === app.id" class="kebab-dropdown" @click.stop>
+                        <button v-if="!app.tailoredResume" @click="useMaster(app); closeMenu()">
+                          <span>📄</span> Use Master Resume
+                        </button>
+                        <button @click="toggleArchive(app); closeMenu()">
+                          <span>📦</span> {{ app.archived ? 'Restore' : 'Archive' }}
+                        </button>
+                        <button class="kebab-danger" @click="removeApplication(app.id); closeMenu()">
+                          <span>🗑️</span> Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Tailored Resume -->
-              <details v-if="app.tailoredResume" class="details" style="margin-top: 12px;">
-                <summary>Tailored Resume</summary>
-                <pre style="margin-top: 12px;">{{ app.tailoredResume }}</pre>
-                <button class="danger" @click="clearTailored(app)" style="margin-top: 10px;">Clear</button>
-              </details>
+                <!-- Meta Row -->
+                <div class="kanban-card-meta">
+                  {{ app.location || 'Remote' }} · Applied {{ formatDateShort(app.dateApplied) }}
+                </div>
 
-              <!-- Actions -->
-              <div class="card-actions">
-                <button v-if="!app.tailoredResume" class="ghost" @click="useMaster(app)">
-                  Use Master Resume
-                </button>
-                <button class="ghost" @click="toggleArchive(app)">
-                  {{ app.archived ? 'Restore' : 'Archive' }}
-                </button>
-                <button class="danger" @click="removeApplication(app.id)">
-                  Delete
+                <!-- Follow-up Indicator -->
+                <div v-if="app.followUpDate" class="kanban-card-followup" :class="'followup-' + dueClass(app.followUpDate)">
+                  <span class="followup-icon">{{ followUpIcon(app.followUpDate) }}</span>
+                  <span class="followup-label">{{ followUpLabel(app.followUpDate) }}</span>
+                  <span class="followup-date">{{ formatDateShort(app.followUpDate) }}</span>
+                </div>
+
+                <!-- Quick Info Icons -->
+                <div class="kanban-card-icons" v-if="app.notes || app.communications.length || app.tailoredResume">
+                  <span v-if="app.notes" title="Has notes">📝</span>
+                  <span v-if="app.communications.length" title="Has communications">💬</span>
+                  <span v-if="app.tailoredResume" title="Has tailored resume">📄</span>
+                </div>
+
+                <!-- Primary Action -->
+                <button class="kanban-card-cta" @click="openCommModal(app)">
+                  ➕ Add Communication
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Communication Modal -->
+      <div v-if="showCommModal" class="modal-overlay" @click.self="closeCommModal">
+        <div class="modal comm-modal" role="dialog" aria-modal="true">
+          <div class="modal-header">
+            <div>
+              <h2>Add Communication</h2>
+              <p class="modal-subtitle">{{ commModalApp?.company }} - {{ commModalApp?.position }}</p>
+            </div>
+            <button class="icon-button ghost" type="button" @click="closeCommModal" aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18"/>
+                <path d="m6 6 12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <form class="comm-form" @submit.prevent="submitCommModal">
+            <div class="comm-form-row">
+              <label>
+                Date
+                <input v-model="commModalDraft.date" type="date" required />
+              </label>
+              <label>
+                Type
+                <select v-model="commModalDraft.type">
+                  <option>Email</option>
+                  <option>Phone</option>
+                  <option>Interview</option>
+                  <option>Offer</option>
+                  <option>Other</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Summary
+              <textarea v-model="commModalDraft.summary" placeholder="What happened?" rows="4" required></textarea>
+            </label>
+            <div class="comm-form-actions">
+              <button type="button" class="ghost" @click="closeCommModal">Cancel</button>
+              <button type="submit">Add Communication</button>
+            </div>
+          </form>
+
+          <!-- Previous Communications -->
+          <div v-if="commModalApp?.communications.length" class="comm-history">
+            <h3>Previous Communications</h3>
+            <div v-for="comm in commModalApp.communications" :key="comm.id" class="comm-history-item">
+              <div class="comm-history-header">
+                <span class="comm-history-type">{{ comm.type }}</span>
+                <span class="comm-history-date">{{ formatDateShort(comm.date) }}</span>
+              </div>
+              <p>{{ comm.summary }}</p>
             </div>
           </div>
         </div>
