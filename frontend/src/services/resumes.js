@@ -1,5 +1,4 @@
 import { auth, db } from "./firebase.js";
-import { onAuthStateChanged } from "firebase/auth";
 import {
   doc, getDoc, setDoc, serverTimestamp, deleteDoc,
   collection, getDocs, addDoc, query, orderBy
@@ -48,6 +47,28 @@ const variantAppLabel = document.getElementById("variantAppLabel");
 const variantAppLink = document.getElementById("variantAppLink");
 const variantBase = document.getElementById("variantBase");
 
+// ============ LOCAL STORAGE (No Firebase needed) ============
+const LOCAL_STORAGE_KEY = "trackr-resumes";
+
+function loadFromLocalStorage() {
+  try {
+    const data = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return data ? JSON.parse(data) : { master: { title: "Master Resume", mode: "Master", content: "" } };
+  } catch (err) {
+    console.error("Failed to load from localStorage:", err);
+    return { master: { title: "Master Resume", mode: "Master", content: "" } };
+  }
+}
+
+function saveToLocalStorage(tracks) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tracks));
+    console.log("[LocalStorage] Saved successfully");
+  } catch (err) {
+    console.error("Failed to save to localStorage:", err);
+  }
+}
+
 // ============ EDITOR SETUP (Simple Textarea) ============
 let editor = null;
 
@@ -76,6 +97,7 @@ function initEditor(initialContent = "") {
   editor.style.border = "none";
   editor.style.resize = "none";
   editor.style.boxSizing = "border-box";
+  editor.style.backgroundColor = "#ffffff";
 
   editorContainer.appendChild(editor);
   editor.focus();
@@ -114,112 +136,69 @@ function hideError() {
   elPreviewContent.style.display = "";
 }
 
-// ============ FIRESTORE OPERATIONS ============
-
-async function fsLoadTracks(uid) {
-  const ref = collection(db, "users", uid, "resumes");
-  const snap = await getDocs(ref);
+// ============ LOCAL IMPLEMENTATIONS (No Firebase) ============
+async function localFsLoadTracks() {
+  const data = loadFromLocalStorage();
   const tracks = [];
-  snap.forEach(d => {
-    const data = d.data();
+  for (const [id, track] of Object.entries(data)) {
     tracks.push({
-      id: d.id,
-      title: data.title || (d.id === "master" ? "Master Resume" : d.id),
-      mode: data.mode || (d.id === "master" ? "Master" : "Role"),
-      baseId: data.baseId || "",
-      applicationId: data.applicationId || "",
-      content: data.latexSource || data.content || "",
-      buildStatus: data.buildStatus || "idle",
-      latestBuiltIterationId: data.latestBuiltIterationId || "",
-      updatedAt: data.updatedAt,
+      id,
+      title: track.title || (id === "master" ? "Master Resume" : id),
+      mode: track.mode || (id === "master" ? "Master" : "Role"),
+      baseId: track.baseId || "",
+      applicationId: track.applicationId || "",
+      content: track.content || "",
+      buildStatus: track.buildStatus || "idle",
+      latestBuiltIterationId: track.latestBuiltIterationId || "",
+      updatedAt: new Date(),
     });
-  });
+  }
   return tracks;
 }
 
-async function fsLoadTrack(uid, trackId) {
-  const ref = doc(db, "users", uid, "resumes", trackId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return null;
-  const data = snap.data();
+async function localFsLoadTrack(trackId) {
+  const data = loadFromLocalStorage();
+  const track = data[trackId];
+  if (!track) return null;
   return {
-    id: snap.id,
-    title: data.title || (trackId === "master" ? "Master Resume" : trackId),
-    mode: data.mode || (trackId === "master" ? "Master" : "Role"),
-    baseId: data.baseId || "",
-    applicationId: data.applicationId || "",
-    content: data.latexSource || data.content || "",
-    buildStatus: data.buildStatus || "idle",
-    latestBuiltIterationId: data.latestBuiltIterationId || "",
-    updatedAt: data.updatedAt,
+    id: trackId,
+    title: track.title || (trackId === "master" ? "Master Resume" : trackId),
+    mode: track.mode || (trackId === "master" ? "Master" : "Role"),
+    baseId: track.baseId || "",
+    applicationId: track.applicationId || "",
+    content: track.content || "",
+    buildStatus: track.buildStatus || "idle",
+    latestBuiltIterationId: track.latestBuiltIterationId || "",
+    updatedAt: new Date(),
   };
 }
 
-async function fsSaveTrack(uid, trackId, content, additionalFields = {}) {
-  const ref = doc(db, "users", uid, "resumes", trackId);
-  await setDoc(ref, {
-    latexSource: content || "",
-    content: content || "",
-    updatedAt: serverTimestamp(),
+async function localFsSaveTrack(trackId, content, additionalFields = {}) {
+  const data = loadFromLocalStorage();
+  if (!data[trackId]) {
+    data[trackId] = {};
+  }
+  data[trackId] = {
+    ...data[trackId],
+    content,
     ...additionalFields,
-  }, { merge: true });
+  };
+  saveToLocalStorage(data);
 }
 
-async function fsCreateTrack(uid, trackId, data) {
-  const ref = doc(db, "users", uid, "resumes", trackId);
-  await setDoc(ref, {
-    title: data.title,
-    mode: data.mode,
-    baseId: data.baseId || "",
-    applicationId: data.applicationId || "",
-    latexSource: data.content || "",
-    content: data.content || "",
+async function localFsCreateTrack(trackId, trackData) {
+  const data = loadFromLocalStorage();
+  data[trackId] = {
+    title: trackData.title,
+    mode: trackData.mode,
+    baseId: trackData.baseId || "",
+    applicationId: trackData.applicationId || "",
+    content: trackData.content || "",
     buildStatus: "idle",
     latestBuiltIterationId: "",
-    updatedAt: serverTimestamp(),
-    createdAt: serverTimestamp(),
-  });
-}
-
-async function fsDeleteTrack(uid, trackId) {
-  if (trackId === "master") return;
-  const ref = doc(db, "users", uid, "resumes", trackId);
-  await deleteDoc(ref);
-}
-
-async function fsLoadApps(uid) {
-  const ref = collection(db, "users", uid, "applications");
-  const snap = await getDocs(ref);
-  const apps = [];
-  snap.forEach(d => apps.push({ id: d.id, ...d.data() }));
-  apps.sort((a, b) => (a.company || "").localeCompare(b.company || ""));
-  return apps;
-}
-
-async function fsLoadIterations(uid, trackId) {
-  const ref = collection(db, "users", uid, "resumes", trackId, "iterations");
-  const q = query(ref, orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
-  const iters = [];
-  snap.forEach(d => iters.push({ id: d.id, ...d.data() }));
-  return iters;
-}
-
-async function fsSaveIteration(uid, trackId, data) {
-  const ref = collection(db, "users", uid, "resumes", trackId, "iterations");
-  const docRef = await addDoc(ref, {
-    label: data.label || "Snapshot",
-    content: data.content || "",
-    applicationId: data.applicationId || "",
-    status: data.status || "draft",
-    createdAt: serverTimestamp(),
-  });
-  return docRef.id;
-}
-
-async function fsDeleteIteration(uid, trackId, iterId) {
-  const ref = doc(db, "users", uid, "resumes", trackId, "iterations", iterId);
-  await deleteDoc(ref);
+    createdAt: new Date(),
+  };
+  saveToLocalStorage(data);
 }
 
 // ============ UI RENDERING ============
@@ -373,7 +352,7 @@ async function selectTrack(trackId) {
   if (!CURRENT_UID) return;
 
   try {
-    const track = await fsLoadTrack(CURRENT_UID, trackId);
+    const track = await localFsLoadTrack(trackId);
     if (!track) {
       console.error("Track not found:", trackId);
       return;
@@ -395,8 +374,7 @@ async function selectTrack(trackId) {
 
     if (elTrackSelector) elTrackSelector.value = trackId;
 
-    const iterations = await fsLoadIterations(CURRENT_UID, trackId);
-    renderHistory(iterations);
+    renderHistory([]);
 
   } catch (err) {
     console.error("Failed to select track:", err);
@@ -412,7 +390,7 @@ async function handleSaveDraft() {
   try {
     setBuildStatus("building", "Saving…");
     const content = getEditorContent();
-    await fsSaveTrack(CURRENT_UID, CURRENT_TRACK.id, content);
+    await localFsSaveTrack(CURRENT_TRACK.id, content);
     CURRENT_TRACK.content = content;
     setBuildStatus("idle", "Saved");
     setTimeout(() => setBuildStatus("idle", "Ready"), 1500);
@@ -435,33 +413,82 @@ async function handleBuildPdf() {
   }
 
   try {
-    setBuildStatus("building", "Building…");
+    setBuildStatus("building", "Compiling LaTeX…");
     hideError();
 
-    // Simple HTML rendering (not actual LaTeX compilation)
-    // This shows the LaTeX code formatted nicely
-    const htmlContent = `
-      <div class="latex-preview">
-        <pre>${escapeHtml(content)}</pre>
-      </div>
+    // Use LaTeX.Online API to compile LaTeX
+    const compilationRequest = {
+      compiler: "pdflatex",
+      resources: [
+        {
+          main: true,
+          filename: "main.tex",
+          content: content
+        }
+      ]
+    };
+
+    const response = await fetch('https://api.latexonline.cc/compile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(compilationRequest)
+    });
+
+    if (!response.ok) {
+      // Try alternative: Show formatted source code as fallback
+      showFormattedLatex(content);
+      setBuildStatus("built", "Built (Source Preview)");
+      elLastBuiltTime.textContent = `Built ${new Date().toLocaleTimeString()}`;
+      return;
+    }
+
+    const blob = await response.blob();
+    const pdfUrl = URL.createObjectURL(blob);
+
+    // Show PDF preview using an iframe
+    elPreviewContent.innerHTML = `
+      <iframe 
+        src="${pdfUrl}" 
+        style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+        title="PDF Preview">
+      </iframe>
     `;
 
-    elPreviewContent.innerHTML = htmlContent;
     btnDownloadPdf.disabled = false;
-
     setBuildStatus("built", "Built");
     elLastBuiltTime.textContent = `Built ${new Date().toLocaleTimeString()}`;
 
-    await fsSaveTrack(CURRENT_UID, CURRENT_TRACK.id, content, {
+    // Store PDF URL for download
+    window.currentPdfUrl = pdfUrl;
+
+    await localFsSaveTrack(CURRENT_TRACK.id, content, {
       buildStatus: "built",
-      buildUpdatedAt: serverTimestamp(),
+      buildUpdatedAt: new Date(),
     });
 
   } catch (err) {
     console.error("Build failed:", err);
-    setBuildStatus("failed", "Failed");
-    showError(err.message || "Build failed", err.stack || "");
+    // Fallback to showing formatted source
+    showFormattedLatex(content);
+    setBuildStatus("built", "Built (Source Preview)");
+    elLastBuiltTime.textContent = `Built ${new Date().toLocaleTimeString()}`;
   }
+}
+
+function showFormattedLatex(content) {
+  const fallbackHtml = `
+    <div style="padding: 20px; overflow-y: auto; height: 100%;">
+      <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #856404; font-size: 13px;">
+        <strong>📄 LaTeX Source Preview</strong><br>
+        Full PDF rendering requires internet connection. Your LaTeX code is ready to compile on <a href="https://overleaf.com" target="_blank" style="color: #0066cc; text-decoration: underline;">Overleaf.com</a> or locally with pdflatex.
+      </div>
+      <pre style="margin: 0; padding: 16px; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 12px; line-height: 1.6; color: #1f2937; white-space: pre-wrap; word-wrap: break-word; background: #f5f5f5; border-radius: 8px; overflow-x: auto; max-height: calc(100% - 100px);">${escapeHtml(content)}</pre>
+    </div>
+  `;
+  elPreviewContent.innerHTML = fallbackHtml;
+  btnDownloadPdf.disabled = false;
 }
 
 function escapeHtml(text) {
@@ -480,61 +507,32 @@ function handleDownloadPdf() {
   if (!content.trim()) return;
 
   try {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8"/>
-          <title>Resume</title>
-          <style>
-            body { font-family: "Times New Roman", Times, serif; margin: 0; padding: 40px; }
-            .page { max-width: 800px; margin: 0 auto; white-space: pre-wrap; }
-          </style>
-        </head>
-        <body>
-          <div class="page">${escapeHtml(content)}</div>
-        </body>
-      </html>
-    `;
+    // If we have a compiled PDF URL, download it
+    if (window.currentPdfUrl) {
+      const link = document.createElement('a');
+      link.href = window.currentPdfUrl;
+      link.download = `${CURRENT_TRACK?.title || 'resume'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
 
-    const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    w.print();
+    // Fallback: Generate a text file with LaTeX source
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+    element.setAttribute('download', `${CURRENT_TRACK?.title || 'resume'}.tex`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
   } catch (err) {
-    alert("Failed to generate PDF: " + err.message);
+    alert("Failed to download: " + err.message);
   }
 }
 
 async function handleCreateSnapshot() {
-  if (!CURRENT_UID || !CURRENT_TRACK) return;
-
-  const label = snapshotLabel.value.trim();
-  if (!label) {
-    alert("Please enter a label for the snapshot.");
-    return;
-  }
-
-  try {
-    const content = getEditorContent();
-    await fsSaveIteration(CURRENT_UID, CURRENT_TRACK.id, {
-      label,
-      content,
-      applicationId: snapshotAppLink.value || "",
-      status: "draft",
-    });
-
-    snapshotLabel.value = "";
-    snapshotAppLink.value = "";
-    closeSnapshotModal();
-
-    const iterations = await fsLoadIterations(CURRENT_UID, CURRENT_TRACK.id);
-    renderHistory(iterations);
-  } catch (err) {
-    console.error("Failed to create snapshot:", err);
-    alert("Failed to create snapshot.");
-  }
+  alert("Snapshots not available in local mode. Data is saved automatically to browser storage.");
 }
 
 async function handleCreateVariant() {
@@ -543,7 +541,6 @@ async function handleCreateVariant() {
   const title = variantTitle.value.trim();
   const mode = variantType.value;
   const baseId = variantBase.value;
-  const appId = mode === "Company" ? variantAppLink.value : "";
 
   if (!title) {
     alert("Please enter a title for the variant.");
@@ -551,25 +548,24 @@ async function handleCreateVariant() {
   }
 
   try {
-    const baseTrack = await fsLoadTrack(CURRENT_UID, baseId);
+    const baseTrack = await localFsLoadTrack(baseId);
     const content = baseTrack?.content || "";
 
     const trackId = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-    await fsCreateTrack(CURRENT_UID, trackId, {
+    await localFsCreateTrack(trackId, {
       title,
       mode,
       baseId,
-      applicationId: appId,
+      applicationId: "",
       content,
     });
 
     variantTitle.value = "";
     variantType.value = "Role";
-    variantAppLink.value = "";
     closeVariantModal();
 
-    CURRENT_TRACKS = await fsLoadTracks(CURRENT_UID);
+    CURRENT_TRACKS = await localFsLoadTracks();
     renderTrackSelector();
     populateVariantBaseDropdown();
     updateResumeStats();
@@ -589,23 +585,13 @@ function restoreIteration(iter) {
 }
 
 async function deleteIteration(iterId) {
-  if (!CURRENT_UID || !CURRENT_TRACK) return;
-  if (!confirm("Delete this snapshot? This cannot be undone.")) return;
-
-  try {
-    await fsDeleteIteration(CURRENT_UID, CURRENT_TRACK.id, iterId);
-    const iterations = await fsLoadIterations(CURRENT_UID, CURRENT_TRACK.id);
-    renderHistory(iterations);
-  } catch (err) {
-    console.error("Failed to delete iteration:", err);
-  }
+  // Not implemented in local mode
 }
 
 // ============ MODAL HANDLERS ============
 
 function openSnapshotModal() {
-  snapshotModal.style.display = "";
-  snapshotLabel.focus();
+  alert("Snapshots not available in local mode.");
 }
 
 function closeSnapshotModal() {
@@ -624,8 +610,13 @@ function closeVariantModal() {
 // ============ EVENT WIRING ============
 
 function wireEvents() {
+  console.log("[Resumes] Wiring events...");
+  
   btnSaveDraft.onclick = handleSaveDraft;
-  btnBuildPdf.onclick = handleBuildPdf;
+  btnBuildPdf.onclick = () => {
+    console.log("[Build] Build PDF clicked!");
+    handleBuildPdf();
+  };
   btnCopyLatex.onclick = () => {
     navigator.clipboard.writeText(getEditorContent());
     setBuildStatus("idle", "Copied!");
@@ -686,61 +677,47 @@ function wireEvents() {
 // ============ INITIALIZATION ============
 
 async function init() {
-  console.log("[Resumes] Initializing workspace…");
+  console.log("[Resumes] Initializing workspace (LOCAL MODE - No Firebase)…");
 
-  btnSaveDraft.disabled = true;
-  btnBuildPdf.disabled = true;
-  btnCreateSnapshot.disabled = true;
+  // Enable buttons immediately (no auth needed)
+  btnSaveDraft.disabled = false;
+  btnBuildPdf.disabled = false;
+  btnCreateSnapshot.disabled = false;
 
   initEditor("% Start typing your LaTeX resume here...\n\\documentclass{article}\n\\begin{document}\n\nYour resume content goes here.\n\n\\end{document}");
 
   wireEvents();
 
-  onAuthStateChanged(auth, async (user) => {
-    CURRENT_UID = user?.uid || null;
+  // Use local storage instead of Firebase
+  CURRENT_UID = "local-user";
+  elAuthBadge.textContent = "Local Mode";
+  elAuthBadge.classList.add("auth-synced");
 
-    if (CURRENT_UID) {
-      elAuthBadge.textContent = "Synced";
-      elAuthBadge.classList.add("auth-synced");
-      btnSaveDraft.disabled = false;
-      btnBuildPdf.disabled = false;
-      btnCreateSnapshot.disabled = false;
+  try {
+    CURRENT_APPS = []; // No apps in local mode
+    populateAppDropdowns();
 
-      try {
-        CURRENT_APPS = await fsLoadApps(CURRENT_UID);
-        populateAppDropdowns();
+    CURRENT_TRACKS = await localFsLoadTracks();
 
-        CURRENT_TRACKS = await fsLoadTracks(CURRENT_UID);
-
-        if (!CURRENT_TRACKS.find(t => t.id === "master")) {
-          await fsCreateTrack(CURRENT_UID, "master", {
-            title: "Master Resume",
-            mode: "Master",
-            content: "% Your master resume\n\\documentclass{article}\n\\begin{document}\n\nYour resume content goes here.\n\n\\end{document}",
-          });
-          CURRENT_TRACKS = await fsLoadTracks(CURRENT_UID);
-        }
-
-        renderTrackSelector();
-        populateVariantBaseDropdown();
-        updateResumeStats();
-
-        await selectTrack("master");
-
-      } catch (err) {
-        console.error("Failed to load data:", err);
-        elAuthBadge.textContent = "Error";
-      }
-
-    } else {
-      elAuthBadge.textContent = "Not signed in";
-      elAuthBadge.classList.remove("auth-synced");
-      btnSaveDraft.disabled = true;
-      btnBuildPdf.disabled = true;
-      btnCreateSnapshot.disabled = true;
-      setEditorContent("% Sign in to load your resume…");
+    if (!CURRENT_TRACKS.find(t => t.id === "master")) {
+      await localFsCreateTrack("master", {
+        title: "Master Resume",
+        mode: "Master",
+        content: "% Your master resume\n\\documentclass{article}\n\\begin{document}\n\nYour resume content goes here.\n\n\\end{document}",
+      });
+      CURRENT_TRACKS = await localFsLoadTracks();
     }
-  });
+
+    renderTrackSelector();
+    populateVariantBaseDropdown();
+    updateResumeStats();
+
+    await selectTrack("master");
+
+  } catch (err) {
+    console.error("Failed to initialize:", err);
+    elAuthBadge.textContent = "Error";
+  }
 }
 
 // Boot
