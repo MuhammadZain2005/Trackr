@@ -32,8 +32,8 @@
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
               </svg>
             </button>
-            <a href="profile.html" class="avatar" title="Profile & settings">
-              <span>PC</span>
+            <a href="profile.html" class="avatar avatar-image" title="Profile & settings">
+              <img src="/image.png" alt="Profile" />
             </a>
           </div>
         </div>
@@ -104,10 +104,121 @@
         </div>
       </div>
 
-      <!-- Main Layout -->
+      <!-- Applications Board -->
       <div class="layout">
-        <!-- Reminders -->
-        <div id="reminders" class="panel span-2">
+        <div class="panel span-2 kanban-panel">
+          <div class="kanban-header">
+            <div class="kanban-header-left">
+              <h2>Applications</h2>
+              <p class="kanban-subtext">{{ activeCount }} active · {{ nextFollowUpText }}</p>
+            </div>
+            <div class="kanban-header-right">
+              <div class="kanban-search">
+                <svg class="kanban-search-icon" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+                <input v-model="searchTerm" type="search" placeholder="Search company or role..." />
+              </div>
+              <select v-model="sortBy" class="kanban-sort">
+                <option value="updated">Recently Updated</option>
+                <option value="dateApplied">Date Applied</option>
+                <option value="followUp">Follow-up Date</option>
+              </select>
+            </div>
+          </div>
+
+          <div v-if="sortedApplications.length === 0" class="empty-state">
+            No applications yet. Add one to get started!
+          </div>
+
+          <div v-else class="kanban-board">
+            <div
+              v-for="status in statuses.filter(s => s !== 'Saved')"
+              :key="status"
+              class="kanban-column"
+              @dragover.prevent
+              @dragenter.prevent="dragEnterColumn($event)"
+              @dragleave="dragLeaveColumn($event)"
+              @drop="dropCard($event, status)"
+            >
+              <div class="kanban-column-header">
+                <h4>{{ status }}</h4>
+                <span class="kanban-column-count">{{ bucketed[status].length }}</span>
+              </div>
+
+              <div class="kanban-column-cards">
+                <div
+                  v-for="app in bucketed[status]"
+                  :key="app.id"
+                  class="kanban-card"
+                  draggable="true"
+                  @dragstart="dragStart($event, app)"
+                  @dragend="dragEnd($event)"
+                >
+                  <!-- Card Header -->
+                  <div class="kanban-card-header">
+                    <div class="kanban-card-title">
+                      <h4>{{ app.company }}</h4>
+                      <p>{{ app.position }}</p>
+                    </div>
+                    <div class="kanban-card-actions">
+                      <span class="priority-dot" :class="'priority-dot-' + app.priority.toLowerCase()" :title="app.priority + ' priority'"></span>
+                      <div class="kebab-menu">
+                        <button class="kebab-trigger" @click.stop="toggleMenu(app.id)" title="More actions">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="12" cy="5" r="2"/>
+                            <circle cx="12" cy="12" r="2"/>
+                            <circle cx="12" cy="19" r="2"/>
+                          </svg>
+                        </button>
+                        <div v-if="openMenuId === app.id" class="kebab-dropdown" @click.stop>
+                          <button v-if="!app.tailoredResume" @click="useMaster(app); closeMenu()">
+                            <span>📄</span> Use Master Resume
+                          </button>
+                          <button @click="toggleArchive(app); closeMenu()">
+                            <span>📦</span> {{ app.archived ? 'Restore' : 'Archive' }}
+                          </button>
+                          <button class="kebab-danger" @click="removeApplication(app.id); closeMenu()">
+                            <span>🗑️</span> Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Meta Row -->
+                  <div class="kanban-card-meta">
+                    {{ app.location || 'Remote' }} · Applied {{ formatDateShort(app.dateApplied) }}
+                  </div>
+
+                  <!-- Follow-up Indicator -->
+                  <div v-if="app.followUpDate" class="kanban-card-followup" :class="'followup-' + dueClass(app.followUpDate)">
+                    <span class="followup-icon">{{ followUpIcon(app.followUpDate) }}</span>
+                    <span class="followup-label">{{ followUpLabel(app.followUpDate) }}</span>
+                    <span class="followup-date">{{ formatDateShort(app.followUpDate) }}</span>
+                  </div>
+
+                  <!-- Quick Info Icons -->
+                  <div class="kanban-card-icons" v-if="app.notes || app.communications.length || app.tailoredResume">
+                    <span v-if="app.notes" title="Has notes">📝</span>
+                    <span v-if="app.communications.length" title="Has communications">💬</span>
+                    <span v-if="app.tailoredResume" title="Has tailored resume">📄</span>
+                  </div>
+
+                  <!-- Primary Action -->
+                  <button class="kanban-card-cta" @click="openCommModal(app)">
+                    ➕ Add Communication
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reminders -->
+      <div class="layout reminders-layout">
+        <div id="reminders" class="panel span-2 reminders-panel">
           <h2>Upcoming Follow-ups</h2>
 
           <div v-if="reminders.length === 0" class="empty-state">
@@ -128,114 +239,10 @@
         </div>
       </div>
 
-      <!-- Applications Board -->
-      <div class="panel span-2 kanban-panel">
-        <div class="kanban-header">
-          <div class="kanban-header-left">
-            <h2>Applications</h2>
-            <p class="kanban-subtext">{{ activeCount }} active · {{ nextFollowUpText }}</p>
-          </div>
-          <div class="kanban-header-right">
-            <div class="kanban-search">
-              <svg class="kanban-search-icon" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-              </svg>
-              <input v-model="searchTerm" type="search" placeholder="Search company or role..." />
-            </div>
-            <select v-model="sortBy" class="kanban-sort">
-              <option value="updated">Recently Updated</option>
-              <option value="dateApplied">Date Applied</option>
-              <option value="followUp">Follow-up Date</option>
-            </select>
-          </div>
-        </div>
-
-        <div v-if="sortedApplications.length === 0" class="empty-state">
-          No applications yet. Add one to get started!
-        </div>
-
-        <div v-else class="kanban-board">
-          <div
-            v-for="status in statuses.filter(s => s !== 'Saved')"
-            :key="status"
-            class="kanban-column"
-            @dragover.prevent
-            @dragenter.prevent="dragEnterColumn($event)"
-            @dragleave="dragLeaveColumn($event)"
-            @drop="dropCard($event, status)"
-          >
-            <div class="kanban-column-header">
-              <h4>{{ status }}</h4>
-              <span class="kanban-column-count">{{ bucketed[status].length }}</span>
-            </div>
-
-            <div class="kanban-column-cards">
-              <div
-                v-for="app in bucketed[status]"
-                :key="app.id"
-                class="kanban-card"
-                draggable="true"
-                @dragstart="dragStart($event, app)"
-                @dragend="dragEnd($event)"
-              >
-                <!-- Card Header -->
-                <div class="kanban-card-header">
-                  <div class="kanban-card-title">
-                    <h4>{{ app.company }}</h4>
-                    <p>{{ app.position }}</p>
-                  </div>
-                  <div class="kanban-card-actions">
-                    <span class="priority-dot" :class="'priority-dot-' + app.priority.toLowerCase()" :title="app.priority + ' priority'"></span>
-                    <div class="kebab-menu">
-                      <button class="kebab-trigger" @click.stop="toggleMenu(app.id)" title="More actions">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <circle cx="12" cy="5" r="2"/>
-                          <circle cx="12" cy="12" r="2"/>
-                          <circle cx="12" cy="19" r="2"/>
-                        </svg>
-                      </button>
-                      <div v-if="openMenuId === app.id" class="kebab-dropdown" @click.stop>
-                        <button v-if="!app.tailoredResume" @click="useMaster(app); closeMenu()">
-                          <span>📄</span> Use Master Resume
-                        </button>
-                        <button @click="toggleArchive(app); closeMenu()">
-                          <span>📦</span> {{ app.archived ? 'Restore' : 'Archive' }}
-                        </button>
-                        <button class="kebab-danger" @click="removeApplication(app.id); closeMenu()">
-                          <span>🗑️</span> Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Meta Row -->
-                <div class="kanban-card-meta">
-                  {{ app.location || 'Remote' }} · Applied {{ formatDateShort(app.dateApplied) }}
-                </div>
-
-                <!-- Follow-up Indicator -->
-                <div v-if="app.followUpDate" class="kanban-card-followup" :class="'followup-' + dueClass(app.followUpDate)">
-                  <span class="followup-icon">{{ followUpIcon(app.followUpDate) }}</span>
-                  <span class="followup-label">{{ followUpLabel(app.followUpDate) }}</span>
-                  <span class="followup-date">{{ formatDateShort(app.followUpDate) }}</span>
-                </div>
-
-                <!-- Quick Info Icons -->
-                <div class="kanban-card-icons" v-if="app.notes || app.communications.length || app.tailoredResume">
-                  <span v-if="app.notes" title="Has notes">📝</span>
-                  <span v-if="app.communications.length" title="Has communications">💬</span>
-                  <span v-if="app.tailoredResume" title="Has tailored resume">📄</span>
-                </div>
-
-                <!-- Primary Action -->
-                <button class="kanban-card-cta" @click="openCommModal(app)">
-                  ➕ Add Communication
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- Footer Actions -->
+      <div class="footer">
+        <button class="ghost" @click="loadSampleData">Load Sample Data</button>
+        <button class="danger" @click="clearAll">Clear All</button>
       </div>
 
       <!-- Communication Modal -->
@@ -293,12 +300,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Footer Actions -->
-      <div class="footer">
-        <button class="ghost" @click="loadSampleData">Load Sample Data</button>
-        <button class="danger" @click="clearAll">Clear All</button>
       </div>
     </div>
 
