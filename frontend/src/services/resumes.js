@@ -416,38 +416,31 @@ async function handleBuildPdf() {
     setBuildStatus("building", "Compiling LaTeX…");
     hideError();
 
-    // Use LaTeX.Online API to compile LaTeX
-    const compilationRequest = {
-      compiler: "pdflatex",
-      resources: [
-        {
-          main: true,
-          filename: "main.tex",
-          content: content
-        }
-      ]
-    };
-
-    const response = await fetch('https://api.latexonline.cc/compile', {
+    // Send to backend for compilation
+    const response = await fetch('/api/compile-latex', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(compilationRequest)
+      body: JSON.stringify({
+        latexCode: content
+      })
     });
 
     if (!response.ok) {
-      // Try alternative: Show formatted source code as fallback
-      showFormattedLatex(content);
-      setBuildStatus("built", "Built (Source Preview)");
-      elLastBuiltTime.textContent = `Built ${new Date().toLocaleTimeString()}`;
-      return;
+      const errorData = await response.json();
+      throw new Error(errorData.details || errorData.error || 'Compilation failed');
     }
 
-    const blob = await response.blob();
-    const pdfUrl = URL.createObjectURL(blob);
+    // Get PDF blob
+    const pdfBlob = await response.blob();
+    const pdfUrl = URL.createObjectURL(pdfBlob);
 
-    // Show PDF preview using an iframe
+    // Store for download
+    window.currentPdfUrl = pdfUrl;
+    window.currentPdfBlob = pdfBlob;
+
+    // Show PDF in iframe
     elPreviewContent.innerHTML = `
       <iframe 
         src="${pdfUrl}" 
@@ -460,9 +453,7 @@ async function handleBuildPdf() {
     setBuildStatus("built", "Built");
     elLastBuiltTime.textContent = `Built ${new Date().toLocaleTimeString()}`;
 
-    // Store PDF URL for download
-    window.currentPdfUrl = pdfUrl;
-
+    // Save to storage
     await localFsSaveTrack(CURRENT_TRACK.id, content, {
       buildStatus: "built",
       buildUpdatedAt: new Date(),
@@ -470,10 +461,14 @@ async function handleBuildPdf() {
 
   } catch (err) {
     console.error("Build failed:", err);
-    // Fallback to showing formatted source
+    setBuildStatus("failed", "Failed");
+    
+    // Show error with fallback
     showFormattedLatex(content);
-    setBuildStatus("built", "Built (Source Preview)");
-    elLastBuiltTime.textContent = `Built ${new Date().toLocaleTimeString()}`;
+    showError(
+      err.message || "LaTeX compilation failed",
+      "Make sure pdflatex is installed on the server. You can also compile on Overleaf.com"
+    );
   }
 }
 
@@ -507,18 +502,20 @@ function handleDownloadPdf() {
   if (!content.trim()) return;
 
   try {
-    // If we have a compiled PDF URL, download it
-    if (window.currentPdfUrl) {
+    // If we have a compiled PDF, download it
+    if (window.currentPdfBlob) {
+      const url = URL.createObjectURL(window.currentPdfBlob);
       const link = document.createElement('a');
-      link.href = window.currentPdfUrl;
+      link.href = url;
       link.download = `${CURRENT_TRACK?.title || 'resume'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       return;
     }
 
-    // Fallback: Generate a text file with LaTeX source
+    // Fallback: Download LaTeX source
     const element = document.createElement('a');
     element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
     element.setAttribute('download', `${CURRENT_TRACK?.title || 'resume'}.tex`);
