@@ -120,6 +120,16 @@ createApp({
       communicationDrafts: {},
       storageError: "",
       copyMessage: "",
+      // Kanban enhancements
+      openMenuId: null,
+      draggedApp: null,
+      showCommModal: false,
+      commModalApp: null,
+      commModalDraft: {
+        date: todayDate(),
+        type: "Email",
+        summary: "",
+      },
     };
   },
   computed: {
@@ -211,9 +221,39 @@ createApp({
           new Date(`${b.followUpDate}T00:00:00`)
       );
     },
+    nextFollowUpText() {
+      const appsWithFollowUp = this.activeApplications
+        .filter((app) => app.followUpDate && !["Offer", "Rejected"].includes(app.status))
+        .sort((a, b) => new Date(`${a.followUpDate}T00:00:00`) - new Date(`${b.followUpDate}T00:00:00`));
+
+      if (appsWithFollowUp.length === 0) {
+        return "No follow-ups scheduled";
+      }
+
+      const nextApp = appsWithFollowUp[0];
+      const days = this.daysFromToday(nextApp.followUpDate);
+
+      if (days < 0) {
+        return `Follow-up overdue by ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""}`;
+      }
+      if (days === 0) {
+        return "Follow-up due today";
+      }
+      if (days === 1) {
+        return "Next follow-up tomorrow";
+      }
+      return `Next follow-up in ${days} days`;
+    },
   },
   created() {
     this.restoreState();
+  },
+  mounted() {
+    // Close kebab menu when clicking outside
+    document.addEventListener("click", this.handleOutsideClick);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.handleOutsideClick);
   },
   methods: {
     normalizeApplication(app) {
@@ -460,6 +500,116 @@ createApp({
         return "priority-high";
       }
       return "priority-medium";
+    },
+    // Kanban: Short date format
+    formatDateShort(dateValue) {
+      if (!dateValue) {
+        return "TBD";
+      }
+      const date = new Date(`${dateValue}T00:00:00`);
+      if (Number.isNaN(date.getTime())) {
+        return "TBD";
+      }
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    },
+    // Kanban: Follow-up icon
+    followUpIcon(dateValue) {
+      const diff = this.daysFromToday(dateValue);
+      if (diff <= 0) {
+        return "🔴";
+      }
+      if (diff <= 3) {
+        return "🟡";
+      }
+      return "🟢";
+    },
+    // Kanban: Follow-up label
+    followUpLabel(dateValue) {
+      const diff = this.daysFromToday(dateValue);
+      if (diff < 0) {
+        return "Overdue";
+      }
+      if (diff === 0) {
+        return "Due Today";
+      }
+      if (diff <= 3) {
+        return "Due Soon";
+      }
+      return "Scheduled";
+    },
+    // Kanban: Kebab menu toggle
+    toggleMenu(appId) {
+      if (this.openMenuId === appId) {
+        this.openMenuId = null;
+      } else {
+        this.openMenuId = appId;
+      }
+    },
+    closeMenu() {
+      this.openMenuId = null;
+    },
+    handleOutsideClick(event) {
+      if (this.openMenuId && !event.target.closest(".kebab-menu")) {
+        this.openMenuId = null;
+      }
+    },
+    // Kanban: Drag and drop
+    dragStart(event, app) {
+      this.draggedApp = app;
+      event.target.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+    },
+    dragEnd(event) {
+      event.target.classList.remove("dragging");
+      this.draggedApp = null;
+      document.querySelectorAll(".kanban-column").forEach((col) => {
+        col.classList.remove("drag-over");
+      });
+    },
+    dragEnterColumn(event) {
+      event.currentTarget.classList.add("drag-over");
+    },
+    dragLeaveColumn(event) {
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        event.currentTarget.classList.remove("drag-over");
+      }
+    },
+    dropCard(event, newStatus) {
+      event.currentTarget.classList.remove("drag-over");
+      if (this.draggedApp && this.draggedApp.status !== newStatus) {
+        this.draggedApp.status = newStatus;
+        this.touch(this.draggedApp);
+      }
+    },
+    // Kanban: Communication modal
+    openCommModal(app) {
+      this.commModalApp = app;
+      this.commModalDraft = {
+        date: todayDate(),
+        type: "Email",
+        summary: "",
+      };
+      this.showCommModal = true;
+    },
+    closeCommModal() {
+      this.showCommModal = false;
+      this.commModalApp = null;
+    },
+    submitCommModal() {
+      if (!this.commModalApp || !this.commModalDraft.summary.trim()) {
+        return;
+      }
+      this.commModalApp.communications.unshift({
+        id: createId(),
+        date: this.commModalDraft.date,
+        type: this.commModalDraft.type,
+        summary: this.commModalDraft.summary.trim(),
+      });
+      this.touch(this.commModalApp);
+      this.closeCommModal();
     },
   },
   watch: {
