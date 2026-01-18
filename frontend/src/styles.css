@@ -125,6 +125,15 @@ textarea {
   box-shadow: 0 0 0 6px rgba(45, 127, 249, 0.1);
 }
 
+/* Logo image replacement: use a rounded image placed at /frontend/public/logo.png */
+.logo-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  object-fit: cover;
+  display: block;
+}
+
 .brand-name {
   color: rgba(255, 255, 255, 0.92);
   font-weight: 600;
