@@ -12,13 +12,10 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <script defer src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script defer src="profile.js"></script>
   </head>
 
-  <!-- profile-page class scopes the CSS changes -->
   <body class="profile-page">
-    <div id="profileApp" class="page" v-cloak>
+    <div class="page">
       <!-- TOP BAR -->
       <header class="hero compact">
         <div class="topbar">
@@ -54,82 +51,50 @@
       </header>
 
       <!-- MAIN CONTENT -->
-      <main class="layout">
-        <!-- STACK THESE TWO TOP SECTIONS VERTICALLY (full width) -->
-        <div class="profile-stack">
+      <main class="profile-grid-page">
+        <!-- TOP STACK: Profile info + Experience library (UP/DOWN) -->
+        <div class="top-stack">
           <!-- PROFILE INFO -->
           <section class="panel">
             <div class="panel-header">
               <h2>Profile information</h2>
-              <button class="ghost" type="button" @click="toggleEdit">
-                {{ isEditing ? 'Save' : 'Edit' }}
-              </button>
+              <button class="ghost" type="button">Edit</button>
             </div>
 
             <div class="profile-grid">
               <div class="avatar large" aria-label="Local profile avatar">
-                <span>{{ getInitials(profile.name) }}</span>
+                <span>PC</span>
               </div>
 
               <div class="profile-fields">
                 <div class="field">
                   <label>Full name</label>
-                  <input 
-                    type="text" 
-                    v-model="profile.name" 
-                    :disabled="!isEditing"
-                    placeholder="Your Name" 
-                  />
+                  <input type="text" value="Your Name" />
                 </div>
 
                 <div class="field">
                   <label>Preferred title</label>
-                  <input 
-                    type="text" 
-                    v-model="profile.title" 
-                    :disabled="!isEditing"
-                    placeholder="Computer Science Student" 
-                  />
+                  <input type="text" value="Computer Science Student" />
                 </div>
 
                 <div class="field">
                   <label>Location</label>
-                  <input 
-                    type="text" 
-                    v-model="profile.location" 
-                    :disabled="!isEditing"
-                    placeholder="Edmonton, Canada" 
-                  />
+                  <input type="text" value="Edmonton, Canada" />
                 </div>
 
                 <div class="field">
                   <label>Email</label>
-                  <input 
-                    type="email" 
-                    v-model="profile.email" 
-                    :disabled="!isEditing"
-                    placeholder="Optional" 
-                  />
+                  <input type="email" placeholder="Optional" />
                 </div>
 
                 <div class="field">
                   <label>LinkedIn</label>
-                  <input 
-                    type="url" 
-                    v-model="profile.linkedin" 
-                    :disabled="!isEditing"
-                    placeholder="https://linkedin.com/in/..." 
-                  />
+                  <input type="url" placeholder="https://linkedin.com/in/..." />
                 </div>
 
                 <div class="field">
                   <label>Portfolio / GitHub</label>
-                  <input 
-                    type="url" 
-                    v-model="profile.portfolio" 
-                    :disabled="!isEditing"
-                    placeholder="https://github.com/..." 
-                  />
+                  <input type="url" placeholder="https://github.com/..." />
                 </div>
               </div>
             </div>
@@ -144,24 +109,23 @@
             <div class="panel-header">
               <h2>Experience library</h2>
               <div class="panel-actions">
-                <button class="ghost" type="button" @click="selectAllExperiences">Select all</button>
-                <button class="ghost danger" type="button" @click="clearSelectedExperiences">Clear selected</button>
+                <button class="ghost" type="button">Select all</button>
+                <button class="ghost danger" type="button">Clear selected</button>
               </div>
             </div>
 
             <p class="muted" style="margin-top: -6px;">
               Add projects, roles, and bullet points you want available for AI-generated resumes.
-              Later you'll pick what to include per application.
+              Later you’ll pick what to include per application.
             </p>
 
-            <!-- Add experience item -->
-            <form class="exp-form" @submit.prevent="addExperience">
+            <form class="exp-form" onsubmit="return false;">
               <div class="settings-grid">
                 <div class="field">
                   <label>Type</label>
-                  <select v-model="experienceForm.type">
+                  <select>
                     <option>Work</option>
-                    <option>Project</option>
+                    <option selected>Project</option>
                     <option>Research</option>
                     <option>Volunteer</option>
                     <option>Awards</option>
@@ -170,36 +134,23 @@
 
                 <div class="field">
                   <label>Role / Project name</label>
-                  <input
-                    type="text"
-                    v-model="experienceForm.role"
-                    placeholder="e.g., Software Developer Intern"
-                  />
+                  <input type="text" placeholder="e.g., Software Developer Intern / SignalVault" />
                 </div>
 
                 <div class="field">
                   <label>Organization</label>
-                  <input
-                    type="text"
-                    v-model="experienceForm.organization"
-                    placeholder="e.g., University of Alberta / Personal"
-                  />
+                  <input type="text" placeholder="e.g., University of Alberta / Personal" />
                 </div>
 
                 <div class="field">
                   <label>Date range</label>
-                  <input 
-                    type="text" 
-                    v-model="experienceForm.dateRange"
-                    placeholder="e.g., May 2025 – Aug 2025" 
-                  />
+                  <input type="text" placeholder="e.g., May 2025 – Aug 2025" />
                 </div>
               </div>
 
               <div class="field" style="margin-top: 10px;">
                 <label>Bullet points</label>
                 <textarea
-                  v-model="experienceForm.bullets"
                   rows="4"
                   placeholder="Write strong resume bullets here (one per line).&#10;• Built ...&#10;• Improved ..."
                 ></textarea>
@@ -209,57 +160,56 @@
               </div>
 
               <div class="row" style="margin-top: 10px;">
-                <button class="primary" type="submit">Add to library</button>
-                <button class="ghost" type="button" @click="resetExperienceForm">Reset</button>
+                <button class="primary" type="button">Add to library</button>
+                <button class="ghost" type="button">Reset</button>
               </div>
             </form>
 
             <div class="divider-line"></div>
 
-            <!-- Experience library list -->
             <div class="exp-list">
-              <div v-if="experiences.length === 0" class="empty-state">
-                No experiences added yet. Add your first experience above.
-              </div>
-              
-              <div 
-                v-for="exp in experiences" 
-                :key="exp.id"
-                class="exp-item"
-              >
+              <div class="exp-item">
                 <label class="exp-check">
-                  <input 
-                    type="checkbox" 
-                    :checked="exp.selected"
-                    @change="toggleExperienceSelection(exp)"
-                  />
-                  <span class="exp-title">
-                    {{ exp.type }} · {{ exp.role }}
-                  </span>
+                  <input type="checkbox" checked />
+                  <span class="exp-title">Project · SignalVault — Offline emergency search engine</span>
                 </label>
 
-                <div class="exp-meta muted">
-                  {{ exp.organization || 'N/A' }} · {{ exp.dateRange || 'N/A' }}
-                </div>
+                <div class="exp-meta muted">Personal · 2025</div>
 
-                <ul class="exp-bullets" v-if="exp.bullets && exp.bullets.length > 0">
-                  <li v-for="(bullet, index) in exp.bullets" :key="index">
-                    {{ bullet }}
-                  </li>
+                <ul class="exp-bullets">
+                  <li>Designed an offline-first UI with searchable guides/resources and fast local lookup.</li>
+                  <li>Built a simple analysis pipeline to rank results and keep the experience minimal under stress.</li>
                 </ul>
 
                 <div class="exp-actions">
-                  <button class="ghost" type="button" @click="editExperience(exp)">Edit</button>
-                  <button class="ghost danger" type="button" @click="deleteExperience(exp.id)">Delete</button>
+                  <button class="ghost" type="button">Edit</button>
+                  <button class="ghost danger" type="button">Delete</button>
+                </div>
+              </div>
+
+              <div class="exp-item">
+                <label class="exp-check">
+                  <input type="checkbox" />
+                  <span class="exp-title">Work · Teaching Assistant — CMPUT</span>
+                </label>
+
+                <div class="exp-meta muted">University of Alberta · 2025</div>
+
+                <ul class="exp-bullets">
+                  <li>Ran tutorials and supported students with debugging, concept clarity, and assessment feedback.</li>
+                  <li>Improved student success by creating quick reference guides and practice questions.</li>
+                </ul>
+
+                <div class="exp-actions">
+                  <button class="ghost" type="button">Edit</button>
+                  <button class="ghost danger" type="button">Delete</button>
                 </div>
               </div>
             </div>
           </section>
         </div>
 
-        <!-- BELOW: keep these in a 2-column grid (or 1-column on mobile via CSS) -->
-
-        <!-- JOB SEARCH PREFERENCES -->
+        <!-- BOTTOM GRID: keep these 4 as-is (2 columns) -->
         <section class="panel">
           <div class="panel-header">
             <h2>Job search preferences</h2>
@@ -268,8 +218,8 @@
           <div class="settings-grid">
             <div class="field">
               <label>Preferred work type</label>
-              <select v-model="preferences.workType">
-                <option>Remote</option>
+              <select>
+                <option selected>Remote</option>
                 <option>Hybrid</option>
                 <option>On-site</option>
               </select>
@@ -277,8 +227,8 @@
 
             <div class="field">
               <label>Default application source</label>
-              <select v-model="preferences.defaultSource">
-                <option>LinkedIn</option>
+              <select>
+                <option selected>LinkedIn</option>
                 <option>Referral</option>
                 <option>Company website</option>
                 <option>Other</option>
@@ -287,25 +237,20 @@
 
             <div class="field">
               <label>Default priority</label>
-              <select v-model="preferences.defaultPriority">
+              <select>
                 <option>Low</option>
-                <option>Medium</option>
+                <option selected>Medium</option>
                 <option>High</option>
               </select>
             </div>
 
             <div class="field">
               <label>Default follow-up window (days)</label>
-              <input 
-                type="number" 
-                v-model.number="preferences.followUpWindow" 
-                min="1" 
-              />
+              <input type="number" value="7" min="1" />
             </div>
           </div>
         </section>
 
-        <!-- TRACKER SETTINGS -->
         <section class="panel">
           <div class="panel-header">
             <h2>Application tracker settings</h2>
@@ -313,23 +258,22 @@
 
           <div class="toggle-list">
             <label class="toggle">
-              <input type="checkbox" v-model="settings.showArchivedByDefault" />
+              <input type="checkbox" checked />
               <span>Show archived applications by default</span>
             </label>
 
             <label class="toggle">
-              <input type="checkbox" v-model="settings.highlightOverdue" />
+              <input type="checkbox" checked />
               <span>Highlight overdue follow-ups</span>
             </label>
 
             <label class="toggle">
-              <input type="checkbox" v-model="settings.groupByStatus" />
+              <input type="checkbox" />
               <span>Group applications by status</span>
             </label>
           </div>
         </section>
 
-        <!-- DATA & PRIVACY -->
         <section class="panel">
           <div class="panel-header">
             <h2>Data & privacy</h2>
@@ -340,20 +284,19 @@
           </p>
 
           <div class="row">
-            <button class="ghost" type="button" @click="exportData">Export data</button>
-            <button class="ghost" type="button" @click="importData">Import data</button>
-            <button class="ghost danger" type="button" @click="clearAllData">Clear all data</button>
+            <button class="ghost" type="button">Export data</button>
+            <button class="ghost" type="button">Import data</button>
+            <button class="ghost danger" type="button">Clear all data</button>
           </div>
         </section>
 
-        <!-- ABOUT -->
         <section class="panel">
           <div class="panel-header">
             <h2>About this project</h2>
           </div>
 
           <p>
-            JobTracker helps job seekers manage applications, track statuses, customize resumes,
+            Trackr helps job seekers manage applications, track statuses, customize resumes,
             and organize follow-ups — all in one place.
           </p>
 
@@ -362,7 +305,7 @@
       </main>
 
       <footer class="footer">
-        <p>JobTracker · Personal job application manager</p>
+        <p>Trackr · Personal job application manager</p>
       </footer>
     </div>
   </body>

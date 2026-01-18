@@ -1,9 +1,8 @@
-const STORAGE_KEY = "job-tracker-storage-v1";
+const STORAGE_KEY = "job-tracker-storage-v2";
 
 const todayDate = () => new Date().toISOString().slice(0, 10);
 
-const createId = () =>
-  `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+const createId = () => `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
 const defaultMasterResume = `Taylor Harper
 Product Operations Specialist
@@ -88,12 +87,20 @@ const sampleApplications = [
   },
 ];
 
-Vue.createApp({
+const app = Vue.createApp({
   data() {
     return {
       statuses: ["Saved", "Applied", "Interview", "Offer", "Rejected"],
       masterResume: defaultMasterResume,
       applications: [],
+
+      // Folder PDFs (pdf-only)
+      folderPdfs: { master: [], swe: [], data: [] },
+      showFolderModal: false,
+      activeFolder: null,
+      pdfDraftName: "",
+      pdfDraftUrl: "",
+
       form: {
         company: "",
         position: "",
@@ -106,6 +113,7 @@ Vue.createApp({
         notes: "",
         useMasterResume: true,
       },
+
       searchTerm: "",
       statusFilter: "All",
       sortBy: "updated",
@@ -114,126 +122,111 @@ Vue.createApp({
       showTrackModal: false,
       communicationDrafts: {},
       storageError: "",
-      copyMessage: "",
     };
   },
+
   computed: {
     activeApplications() {
-      return this.applications.filter((app) => !app.archived);
+      return this.applications.filter((a) => !a.archived);
     },
+
     stats() {
       const counts = {};
-      this.statuses.forEach((status) => {
-        counts[status] = 0;
-      });
-      this.activeApplications.forEach((app) => {
-        if (counts[app.status] !== undefined) {
-          counts[app.status] += 1;
-        }
+      this.statuses.forEach((s) => (counts[s] = 0));
+      this.activeApplications.forEach((a) => {
+        if (counts[a.status] !== undefined) counts[a.status] += 1;
       });
       return counts;
     },
+
     activeCount() {
       return this.activeApplications.filter(
-        (app) => !["Offer", "Rejected"].includes(app.status)
+        (a) => !["Offer", "Rejected"].includes(a.status)
       ).length;
     },
+
     filteredApplications() {
       const term = this.searchTerm.toLowerCase();
-      return this.applications.filter((app) => {
-        if (!this.showArchived && app.archived) {
-          return false;
-        }
-        if (this.statusFilter !== "All" && app.status !== this.statusFilter) {
-          return false;
-        }
-        if (!term) {
-          return true;
-        }
+      return this.applications.filter((a) => {
+        if (!this.showArchived && a.archived) return false;
+        if (this.statusFilter !== "All" && a.status !== this.statusFilter) return false;
+
+        if (!term) return true;
         return (
-          app.company.toLowerCase().includes(term) ||
-          app.position.toLowerCase().includes(term)
+          a.company.toLowerCase().includes(term) ||
+          a.position.toLowerCase().includes(term)
         );
       });
     },
+
     sortedApplications() {
       const apps = [...this.filteredApplications];
       const getDateValue = (dateValue, fallback = 0) =>
         dateValue ? new Date(`${dateValue}T00:00:00`).getTime() : fallback;
 
       if (this.sortBy === "dateApplied") {
-        return apps.sort(
-          (a, b) =>
-            getDateValue(b.dateApplied) - getDateValue(a.dateApplied)
-        );
+        return apps.sort((a, b) => getDateValue(b.dateApplied) - getDateValue(a.dateApplied));
       }
       if (this.sortBy === "followUp") {
         return apps.sort(
           (a, b) =>
-            getDateValue(a.followUpDate, Infinity) -
-            getDateValue(b.followUpDate, Infinity)
+            getDateValue(a.followUpDate, Infinity) - getDateValue(b.followUpDate, Infinity)
         );
       }
       return apps.sort(
-        (a, b) =>
-          new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+        (a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
       );
     },
+
     bucketed() {
       const buckets = {};
-      this.statuses.forEach((status) => {
-        buckets[status] = [];
-      });
-      this.sortedApplications.forEach((app) => {
-        if (buckets[app.status]) {
-          buckets[app.status].push(app);
-        }
+      this.statuses.forEach((s) => (buckets[s] = []));
+      this.sortedApplications.forEach((a) => {
+        if (buckets[a.status]) buckets[a.status].push(a);
       });
       return buckets;
     },
+
     reminders() {
       const upcoming = [];
-      this.activeApplications.forEach((app) => {
-        if (!app.followUpDate) {
-          return;
-        }
-        const days = this.daysFromToday(app.followUpDate);
-        if (days <= this.remindersWindow) {
-          upcoming.push(app);
-        }
+      this.activeApplications.forEach((a) => {
+        if (!a.followUpDate) return;
+        const days = this.daysFromToday(a.followUpDate);
+        if (days <= this.remindersWindow) upcoming.push(a);
       });
+
       return upcoming.sort(
         (a, b) =>
-          new Date(`${a.followUpDate}T00:00:00`) -
-          new Date(`${b.followUpDate}T00:00:00`)
+          new Date(`${a.followUpDate}T00:00:00`) - new Date(`${b.followUpDate}T00:00:00`)
       );
     },
   },
+
   created() {
     this.restoreState();
   },
+
   methods: {
-    normalizeApplication(app) {
+    normalizeApplication(appObj) {
       return {
-        ...app,
-        id: app.id || createId(),
-        company: app.company || "",
-        position: app.position || "",
-        location: app.location || "",
-        source: app.source || "",
-        dateApplied: app.dateApplied || todayDate(),
-        followUpDate: app.followUpDate || "",
-        status: app.status || "Applied",
-        priority: app.priority || "Medium",
-        notes: app.notes || "",
-        tailoredResume: app.tailoredResume || "",
-        communications: Array.isArray(app.communications)
-          ? app.communications
-          : [],
-        lastUpdated: app.lastUpdated || new Date().toISOString(),
-        archived: Boolean(app.archived),
+        ...appObj,
+        id: appObj.id || createId(),
+        company: appObj.company || "",
+        position: appObj.position || "",
+        location: appObj.location || "",
+        source: appObj.source || "",
+        dateApplied: appObj.dateApplied || todayDate(),
+        followUpDate: appObj.followUpDate || "",
+        status: appObj.status || "Applied",
+        priority: appObj.priority || "Medium",
+        notes: appObj.notes || "",
+        tailoredResume: appObj.tailoredResume || "",
+        communications: Array.isArray(appObj.communications) ? appObj.communications : [],
+        lastUpdated: appObj.lastUpdated || new Date().toISOString(),
+        archived: Boolean(appObj.archived),
       };
     },
+
     ensureDraft(appId) {
       if (!this.communicationDrafts[appId]) {
         this.communicationDrafts[appId] = {
@@ -243,45 +236,54 @@ Vue.createApp({
         };
       }
     },
+
     openTrackModal() {
       this.showTrackModal = true;
     },
     closeTrackModal() {
       this.showTrackModal = false;
     },
+
     restoreState() {
       try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          this.masterResume = parsed.masterResume || defaultMasterResume;
-          this.applications = Array.isArray(parsed.applications)
-            ? parsed.applications.map(this.normalizeApplication)
-            : [];
-        } else {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          // defaults
+          this.masterResume = defaultMasterResume;
           this.applications = [];
+          this.folderPdfs = { master: [], swe: [], data: [] };
+          return;
         }
-        this.applications.forEach((app) => {
-          this.ensureDraft(app.id);
-        });
-      } catch (error) {
-        this.storageError =
-          "Unable to load saved data. Local storage may be unavailable.";
+
+        const parsed = JSON.parse(raw);
+        this.masterResume = parsed.masterResume || defaultMasterResume;
+
+        this.applications = Array.isArray(parsed.applications)
+          ? parsed.applications.map(this.normalizeApplication)
+          : [];
+
+        this.folderPdfs = parsed.folderPdfs || { master: [], swe: [], data: [] };
+
+        this.applications.forEach((a) => this.ensureDraft(a.id));
+      } catch (e) {
+        this.storageError = "Unable to load saved data. Local storage may be unavailable.";
       }
     },
+
     persistState() {
       try {
         const payload = {
           masterResume: this.masterResume,
           applications: this.applications,
+          folderPdfs: this.folderPdfs,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
         this.storageError = "";
-      } catch (error) {
-        this.storageError =
-          "Unable to save. Storage limit may be reached in this browser.";
+      } catch (e) {
+        this.storageError = "Unable to save. Storage limit may be reached in this browser.";
       }
     },
+
     addApplication() {
       const newApplication = this.normalizeApplication({
         company: this.form.company.trim(),
@@ -298,12 +300,14 @@ Vue.createApp({
         lastUpdated: new Date().toISOString(),
         archived: false,
       });
+
       this.applications.unshift(newApplication);
       this.ensureDraft(newApplication.id);
       this.resetForm();
       this.persistState();
       this.closeTrackModal();
     },
+
     resetForm() {
       this.form = {
         company: "",
@@ -318,150 +322,162 @@ Vue.createApp({
         useMasterResume: true,
       };
     },
+
     removeApplication(id) {
-      if (!confirm("Delete this application? This cannot be undone.")) {
-        return;
-      }
-      this.applications = this.applications.filter((app) => app.id !== id);
+      if (!confirm("Delete this application? This cannot be undone.")) return;
+      this.applications = this.applications.filter((a) => a.id !== id);
       delete this.communicationDrafts[id];
       this.persistState();
     },
+
     toggleArchive(application) {
       application.archived = !application.archived;
       this.touch(application);
     },
+
     addCommunication(application) {
       const draft = this.communicationDrafts[application.id];
-      if (!draft || !draft.summary.trim()) {
-        return;
-      }
+      if (!draft || !draft.summary.trim()) return;
+
       application.communications.unshift({
         id: createId(),
         date: draft.date,
         type: draft.type,
         summary: draft.summary.trim(),
       });
+
       draft.summary = "";
       this.touch(application);
     },
+
     useMaster(application) {
       application.tailoredResume = this.masterResume;
       this.touch(application);
     },
+
     clearTailored(application) {
       application.tailoredResume = "";
       this.touch(application);
     },
-    copyMasterResume() {
-      if (!navigator.clipboard) {
-        this.copyMessage = "Copy not available. Select and copy manually.";
-        return;
-      }
-      navigator.clipboard
-        .writeText(this.masterResume)
-        .then(() => {
-          this.copyMessage = "Master resume copied.";
-          setTimeout(() => {
-            this.copyMessage = "";
-          }, 2000);
-        })
-        .catch(() => {
-          this.copyMessage = "Unable to copy. Select and copy manually.";
-        });
-    },
+
     loadSampleData() {
-      if (
-        this.applications.length > 0 &&
-        !confirm("Replace existing data with sample applications?")
-      ) {
+      if (this.applications.length > 0 && !confirm("Replace existing data with sample applications?")) {
         return;
       }
       this.applications = sampleApplications.map(this.normalizeApplication);
-      this.applications.forEach((app) => this.ensureDraft(app.id));
+      this.applications.forEach((a) => this.ensureDraft(a.id));
       this.persistState();
     },
+
     clearAll() {
-      if (!confirm("Clear all applications and reset resumes?")) {
-        return;
-      }
+      if (!confirm("Clear all applications and reset folders?")) return;
       this.masterResume = defaultMasterResume;
       this.applications = [];
       this.communicationDrafts = {};
+      this.folderPdfs = { master: [], swe: [], data: [] };
       this.persistState();
     },
+
     touch(application) {
       application.lastUpdated = new Date().toISOString();
       this.persistState();
     },
+
     formatDate(dateValue) {
-      if (!dateValue) {
-        return "TBD";
-      }
+      if (!dateValue) return "TBD";
       const date = new Date(`${dateValue}T00:00:00`);
-      if (Number.isNaN(date.getTime())) {
-        return "TBD";
-      }
+      if (Number.isNaN(date.getTime())) return "TBD";
       return date.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       });
     },
+
     daysFromToday(dateValue) {
-      if (!dateValue) {
-        return Infinity;
-      }
+      if (!dateValue) return Infinity;
       const today = new Date();
-      const normalizedToday = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-      );
+      const normalizedToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const due = new Date(`${dateValue}T00:00:00`);
       const diffMs = due.getTime() - normalizedToday.getTime();
       return Math.floor(diffMs / 86400000);
     },
+
     dueClass(dateValue) {
-      if (!dateValue) {
-        return "";
-      }
+      if (!dateValue) return "";
       const diff = this.daysFromToday(dateValue);
-      if (diff < 0) {
-        return "overdue";
-      }
-      if (diff <= 3) {
-        return "due-soon";
-      }
+      if (diff < 0) return "overdue";
+      if (diff <= 3) return "due-soon";
       return "ok";
     },
+
     dueLabel(dateValue) {
       const diff = this.daysFromToday(dateValue);
-      if (diff < 0) {
-        return `${Math.abs(diff)} days overdue`;
-      }
-      if (diff === 0) {
-        return "Due today";
-      }
-      if (diff === 1) {
-        return "Due tomorrow";
-      }
+      if (diff < 0) return `${Math.abs(diff)} days overdue`;
+      if (diff === 0) return "Due today";
+      if (diff === 1) return "Due tomorrow";
       return `Due in ${diff} days`;
     },
+
     priorityClass(priority) {
-      if (priority === "Low") {
-        return "priority-low";
-      }
-      if (priority === "High") {
-        return "priority-high";
-      }
+      if (priority === "Low") return "priority-low";
+      if (priority === "High") return "priority-high";
       return "priority-medium";
     },
-  },
-  watch: {
-    masterResume: "persistState",
-    applications: {
-      handler: "persistState",
-      deep: true,
+
+    // ===== Folder PDFs =====
+    openFolder(key) {
+      this.activeFolder = key;
+      this.showFolderModal = true;
+      this.pdfDraftName = "";
+      this.pdfDraftUrl = "";
+    },
+
+    closeFolder() {
+      this.showFolderModal = false;
+      this.activeFolder = null;
+      this.pdfDraftName = "";
+      this.pdfDraftUrl = "";
+    },
+
+    addPdfToFolder() {
+      const name = (this.pdfDraftName || "").trim();
+      const url = (this.pdfDraftUrl || "").trim();
+
+      if (!this.activeFolder) return;
+      if (!name || !url) return;
+
+      if (!url.toLowerCase().endsWith(".pdf")) {
+        alert("Please paste a URL that ends with .pdf");
+        return;
+      }
+
+      this.folderPdfs[this.activeFolder].unshift({
+        id:
+          (typeof crypto !== "undefined" && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : createId(),
+        name,
+        url,
+        addedAt: Date.now(),
+      });
+
+      this.pdfDraftName = "";
+      this.pdfDraftUrl = "";
+      this.persistState();
+    },
+
+    removePdf(folderKey, pdfId) {
+      this.folderPdfs[folderKey] = this.folderPdfs[folderKey].filter((p) => p.id !== pdfId);
+      this.persistState();
     },
   },
-}).mount("#app");
+
+  watch: {
+    masterResume: "persistState",
+    applications: { handler: "persistState", deep: true },
+    folderPdfs: { handler: "persistState", deep: true },
+  },
+});
+
+app.mount("#app");
