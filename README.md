@@ -20,7 +20,6 @@ Trackr is a lightweight, privacy-focused job application tracker (a personal CRM
 - [Environment variables](#environment-variables)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
-- [Author](#author)
 - [License](#license)
 
 ---
@@ -187,9 +186,6 @@ git push origin feature/your-feature
 
 - Keep secrets out of the repo. Use `.env` and platform secret managers.
 - Add tests and documentation for new features.
-
-## Author
-👤 **Amritpal Singh** (project maintainer)
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
