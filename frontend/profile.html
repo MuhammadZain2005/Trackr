@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile & Settings · JobTracker</title>
+    <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body class="profile-page">
+    <div id="profileApp" class="page" v-cloak>
+        <!-- TOP BAR -->
+        <header class="hero compact">
+            <div class="topbar">
+                <div class="brand">
+                    <div class="logo">
+                        <span class="logo-dot"></span>
+                    </div>
+                    <span class="brand-name">JobTracker</span>
+                </div>
+
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">Applications</a>
+                    <a href="index.html#resume" class="nav-link">Resumes</a>
+                    <a href="index.html#reminders" class="nav-link">Reminders</a>
+                    <a href="profile.html" class="nav-link is-active">Profile</a>
+                </nav>
+
+                <div class="topbar-actions">
+                    <a href="profile.html" class="avatar" title="Profile & settings">
+                        <span>{{ getInitials(profile.name) }}</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="hero-grid">
+                <div class="hero-copy">
+                    <h1>Profile & Settings</h1>
+                    <p class="subtitle">
+                        Manage your personal info, resume defaults, and job-search preferences.
+                    </p>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="layout">
+            <!-- STACK THESE TWO TOP SECTIONS VERTICALLY (full width) -->
+            <div class="profile-stack">
+                <!-- PROFILE INFO -->
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Profile information</h2>
+                        <button class="ghost" type="button" @click="toggleEdit">
+                            {{ isEditing ? 'Save' : 'Edit' }}
+                        </button>
+                    </div>
+
+                    <div class="profile-grid">
+                        <div class="avatar large" aria-label="Local profile avatar">
+                            <span>{{ getInitials(profile.name) }}</span>
+                        </div>
+
+                        <div class="profile-fields">
+                            <div class="field">
+                                <label>Full name</label>
+                                <input 
+                                    type="text" 
+                                    v-model="profile.name" 
+                                    :disabled="!isEditing"
+                                    placeholder="Your Name" 
+                                />
+                            </div>
+
+                            <div class="field">
+                                <label>Preferred title</label>
+                                <input 
+                                    type="text" 
+                                    v-model="profile.title" 
+                                    :disabled="!isEditing"
+                                    placeholder="Computer Science Student" 
+                                />
+                            </div>
+
+                            <div class="field">
+                                <label>Location</label>
+                                <input 
+                                    type="text" 
+                                    v-model="profile.location" 
+                                    :disabled="!isEditing"
+                                    placeholder="Edmonton, Canada" 
+                                />
+                            </div>
+
+                            <div class="field">
+                                <label>Email</label>
+                                <input 
+                                    type="email" 
+                                    v-model="profile.email" 
+                                    :disabled="!isEditing"
+                                    placeholder="Optional" 
+                                />
+                            </div>
+
+                            <div class="field">
+                                <label>LinkedIn</label>
+                                <input 
+                                    type="url" 
+                                    v-model="profile.linkedin" 
+                                    :disabled="!isEditing"
+                                    placeholder="https://linkedin.com/in/..." 
+                                />
+                            </div>
+
+                            <div class="field">
+                                <label>Portfolio / GitHub</label>
+                                <input 
+                                    type="url" 
+                                    v-model="profile.portfolio" 
+                                    :disabled="!isEditing"
+                                    placeholder="https://github.com/..." 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="muted" style="margin-top: 10px;">
+                        This profile is used to pre-fill application details and future resume exports.
+                    </p>
+                </section>
+
+                <!-- EXPERIENCE LIBRARY -->
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Experience library</h2>
+                        <div class="panel-actions">
+                            <button class="ghost" type="button" @click="selectAllExperiences">Select all</button>
+                            <button class="ghost danger" type="button" @click="clearSelectedExperiences">Clear selected</button>
+                        </div>
+                    </div>
+
+                    <p class="muted" style="margin-top: -6px;">
+                        Add projects, roles, and bullet points you want available for AI-generated resumes.
+                        Later you'll pick what to include per application.
+                    </p>
+
+                    <!-- Add experience item -->
+                    <form class="exp-form" @submit.prevent="addExperience">
+                        <div class="settings-grid">
+                            <div class="field">
+                                <label>Type</label>
+                                <select v-model="experienceForm.type">
+                                    <option>Work</option>
+                                    <option>Project</option>
+                                    <option>Research</option>
+                                    <option>Volunteer</option>
+                                    <option>Awards</option>
+                                </select>
+                            </div>
+
+                            <div class="field">
+                                <label>Role / Project name</label>
+                                <input
+                                    type="text"
+                                    v-model="experienceForm.role"
+                                    placeholder="e.g., Software Developer Intern"
+                                />
+                            </div>
+
+                            <div class="field">
+                                <label>Organization</label>
+                                <input
+                                    type="text"
+                                    v-model="experienceForm.organization"
+                                    placeholder="e.g., University of Alberta / Personal"
+                                />
+                            </div>
+
+                            <div class="field">
+                                <label>Date range</label>
+                                <input 
+                                    type="text" 
+                                    v-model="experienceForm.dateRange"
+                                    placeholder="e.g., May 2025 – Aug 2025" 
+                                />
+                            </div>
+                        </div>
+
+                        <div class="field" style="margin-top: 10px;">
+                            <label>Bullet points</label>
+                            <textarea
+                                v-model="experienceForm.bullets"
+                                rows="4"
+                                placeholder="Write strong resume bullets here (one per line).
+• Built ...
+• Improved ..."
+                            ></textarea>
+                            <p class="muted" style="margin-top: 6px;">
+                                Tip: one bullet per line — easier to select later.
+                            </p>
+                        </div>
+
+                        <div class="row" style="margin-top: 10px;">
+                            <button class="primary" type="submit">Add to library</button>
+                            <button class="ghost" type="button" @click="resetExperienceForm">Reset</button>
+                        </div>
+                    </form>
+
+                    <div class="divider-line"></div>
+
+                    <!-- Experience library list -->
+                    <div class="exp-list">
+                        <div v-if="experiences.length === 0" class="empty-state">
+                            No experiences added yet. Add your first experience above.
+                        </div>
+                        
+                        <div 
+                            v-for="exp in experiences" 
+                            :key="exp.id"
+                            class="exp-item"
+                        >
+                            <label class="exp-check">
+                                <input 
+                                    type="checkbox" 
+                                    :checked="exp.selected"
+                                    @change="toggleExperienceSelection(exp)"
+                                />
+                                <span class="exp-title">
+                                    {{ exp.type }} · {{ exp.role }}
+                                </span>
+                            </label>
+
+                            <div class="exp-meta muted">
+                                {{ exp.organization || 'N/A' }} · {{ exp.dateRange || 'N/A' }}
+                            </div>
+
+                            <ul class="exp-bullets" v-if="exp.bullets && exp.bullets.length > 0">
+                                <li v-for="(bullet, index) in exp.bullets" :key="index">
+                                    {{ bullet }}
+                                </li>
+                            </ul>
+
+                            <div class="exp-actions">
+                                <button class="ghost" type="button" @click="editExperience(exp)">Edit</button>
+                                <button class="ghost danger" type="button" @click="deleteExperience(exp.id)">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- BELOW: keep these in a 2-column grid (or 1-column on mobile via CSS) -->
+
+            <!-- JOB SEARCH PREFERENCES -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>Job search preferences</h2>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="field">
+                        <label>Preferred work type</label>
+                        <select v-model="preferences.workType">
+                            <option>Remote</option>
+                            <option>Hybrid</option>
+                            <option>On-site</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>Default application source</label>
+                        <select v-model="preferences.defaultSource">
+                            <option>LinkedIn</option>
+                            <option>Referral</option>
+                            <option>Company website</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>Default priority</label>
+                        <select v-model="preferences.defaultPriority">
+                            <option>Low</option>
+                            <option>Medium</option>
+                            <option>High</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>Default follow-up window (days)</label>
+                        <input 
+                            type="number" 
+                            v-model.number="preferences.followUpWindow" 
+                            min="1" 
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <!-- TRACKER SETTINGS -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>Application tracker settings</h2>
+                </div>
+
+                <div class="toggle-list">
+                    <label class="toggle">
+                        <input type="checkbox" v-model="settings.showArchivedByDefault" />
+                        <span>Show archived applications by default</span>
+                    </label>
+
+                    <label class="toggle">
+                        <input type="checkbox" v-model="settings.highlightOverdue" />
+                        <span>Highlight overdue follow-ups</span>
+                    </label>
+
+                    <label class="toggle">
+                        <input type="checkbox" v-model="settings.groupByStatus" />
+                        <span>Group applications by status</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- DATA & PRIVACY -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>Data & privacy</h2>
+                </div>
+
+                <p class="muted">
+                    All data is stored in Firebase. Export your data for backup.
+                </p>
+
+                <div class="row">
+                    <button class="ghost" type="button" @click="exportData">Export data</button>
+                    <button class="ghost" type="button" @click="importData">Import data</button>
+                    <button class="ghost danger" type="button" @click="clearAllData">Clear all data</button>
+                </div>
+            </section>
+
+            <!-- ABOUT -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>About this project</h2>
+                </div>
+
+                <p>
+                    JobTracker helps job seekers manage applications, track statuses, customize resumes,
+                    and organize follow-ups — all in one place.
+                </p>
+
+                <p class="muted">Built for the Winter 2026 Hackathon</p>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>JobTracker · Personal job application manager</p>
+        </footer>
+    </div>
+
+    <script type="module" src="/src/services/profile.js"></script>
+</body>
+</html>
+

@@ -22,11 +22,15 @@
                         <a href="#" class="nav-link is-active">Dashboard</a>
                         <a href="#" class="nav-link">Applications</a>
                         <a href="#" class="nav-link">Resume</a>
+                        <a href="profile.html" class="nav-link">Profile</a>
                     </nav>
                     <div class="topbar-actions">
                         <button class="icon-button" @click="loadSampleData" title="Load Sample Data">
                             <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                         </button>
+                        <a href="profile.html" class="avatar" title="Profile & settings">
+                            <span>PC</span>
+                        </a>
                     </div>
                 </div>
 
@@ -58,8 +62,8 @@
                                 </option>
                             </select>
                         </div>
-                        <button class="primary-pill" @click="document.querySelector('.form-section')?.scrollIntoView({behavior: 'smooth'})">
-                            New Application
+                        <button class="primary-pill" @click="openTrackModal">
+                            Track Application
                         </button>
                     </div>
                 </div>
@@ -89,61 +93,6 @@
 
             <!-- Main Layout -->
             <div class="layout">
-                <!-- Add Application Form -->
-                <div class="panel form-section">
-                    <h2>Add New Application</h2>
-                    <div class="form-grid">
-                        <label>
-                            Company
-                            <input v-model="form.company" placeholder="Company name" required />
-                        </label>
-                        <label>
-                            Position
-                            <input v-model="form.position" placeholder="Job title" required />
-                        </label>
-                        <label>
-                            Location
-                            <input v-model="form.location" placeholder="City, Country" />
-                        </label>
-                        <label>
-                            Source
-                            <input v-model="form.source" placeholder="Referral, LinkedIn, etc." />
-                        </label>
-                        <label>
-                            Date Applied
-                            <input v-model="form.dateApplied" type="date" />
-                        </label>
-                        <label>
-                            Follow-up Date
-                            <input v-model="form.followUpDate" type="date" />
-                        </label>
-                        <label>
-                            Status
-                            <select v-model="form.status">
-                                <option v-for="status in statuses" :key="status" :value="status">
-                                    {{ status }}
-                                </option>
-                            </select>
-                        </label>
-                        <label>
-                            Priority
-                            <select v-model="form.priority">
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                            </select>
-                        </label>
-                        <label class="checkbox">
-                            <input v-model="form.useMasterResume" type="checkbox" />
-                            Use master resume
-                        </label>
-                    </div>
-                    <label>
-                        Notes
-                        <textarea v-model="form.notes" placeholder="Add any notes..."></textarea>
-                    </label>
-                    <button @click="addApplication">Add Application</button>
-                </div>
 
                 <!-- Master Resume -->
                 <div class="panel">
@@ -289,6 +238,75 @@
             <div class="footer">
                 <button class="ghost" @click="loadSampleData">Load Sample Data</button>
                 <button class="danger" @click="clearAll">Clear All</button>
+            </div>
+        </div>
+
+        <!-- Modal for Track Application -->
+        <div v-if="showTrackModal" class="modal-overlay" @click.self="closeTrackModal">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="track-title">
+                <div class="modal-header">
+                    <h2 id="track-title">Track an Application</h2>
+                    <button class="icon-button ghost" type="button" @click="closeTrackModal" aria-label="Close">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <form class="form-grid" @submit.prevent="addApplication" style="margin-top: 20px;">
+                    <label>
+                        Company
+                        <input v-model="form.company" placeholder="Company name" required />
+                    </label>
+                    <label>
+                        Position
+                        <input v-model="form.position" placeholder="Job title" required />
+                    </label>
+                    <label>
+                        Location
+                        <input v-model="form.location" placeholder="City, Country" />
+                    </label>
+                    <label>
+                        Source
+                        <input v-model="form.source" placeholder="Referral, LinkedIn, etc." />
+                    </label>
+                    <label>
+                        Date Applied
+                        <input v-model="form.dateApplied" type="date" />
+                    </label>
+                    <label>
+                        Follow-up Date
+                        <input v-model="form.followUpDate" type="date" />
+                    </label>
+                    <label>
+                        Status
+                        <select v-model="form.status">
+                            <option v-for="status in statuses" :key="status" :value="status">
+                                {{ status }}
+                            </option>
+                        </select>
+                    </label>
+                    <label>
+                        Priority
+                        <select v-model="form.priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </label>
+                    <label style="grid-column: span 2;">
+                        Notes
+                        <textarea v-model="form.notes" placeholder="Add any notes..." rows="3"></textarea>
+                    </label>
+                    <label class="checkbox" style="grid-column: span 2;">
+                        <input v-model="form.useMasterResume" type="checkbox" />
+                        Start tailored resume from the master version
+                    </label>
+                    <div style="grid-column: span 2; display: flex; gap: 10px;">
+                        <button type="submit">Add Application</button>
+                        <button class="ghost" type="button" @click="resetForm">Reset</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
