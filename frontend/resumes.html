@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resumes · Trackr</title>
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+
+<body>
+  <div class="page resumes-page">
+    <!-- Top / Hero -->
+    <header class="hero">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">
+            <span class="logo-dot"></span>
+          </div>
+          <span class="brand-name">Trackr</span>
+        </div>
+
+        <nav class="nav">
+          <a href="/index.html" class="nav-link">Dashboard</a>
+          <a href="/resumes.html" class="nav-link is-active">Resumes</a>
+          <a href="/profile.html" class="nav-link">Profile</a>
+        </nav>
+
+        <div class="topbar-actions">
+          <a href="/profile.html" class="avatar" title="Profile">
+            <span>PC</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="kicker">Resume Workspace</p>
+          <h1>Resumes</h1>
+          <p class="subtitle">
+            Maintain a master resume in LaTeX, generate tailored versions, and save iterations per job.
+          </p>
+          <p id="authBadge" class="note">Checking sign-in…</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="resumes-wrap">
+      <!-- Master -->
+      <section class="panel resumes-master">
+        <div class="panel-header">
+          <div>
+            <h2>Master Resume (LaTeX)</h2>
+            <p class="muted" style="margin-top:6px;">
+              This is your source of truth. Save it once, then create job-specific iterations below.
+            </p>
+          </div>
+
+          <div class="panel-actions resumes-toolbar">
+            <button id="btnCopyMaster" class="ghost" type="button">Copy</button>
+            <button id="btnSaveMaster" type="button">Save</button>
+          </div>
+        </div>
+
+        <div class="resumes-editorShell">
+          <textarea
+            id="masterLatex"
+            class="resumes-editor"
+            spellcheck="false"
+            placeholder="% Paste your LaTeX master resume here…
+% Tip: include full document (documentclass…begin{document}…end{document})
+"
+          ></textarea>
+
+          <aside class="resumes-side">
+            <div class="resumes-sideCard">
+              <h3>PDF Preview</h3>
+              <p class="muted">Uses your LaTeX API endpoint.</p>
+
+              <div class="resumes-sideBtns">
+                <button id="btnPreviewPdf" class="ghost" type="button">Preview</button>
+                <button id="btnDownloadPdf" class="ghost" type="button">Download</button>
+              </div>
+
+              <div id="latexStatus" class="resumes-status muted">—</div>
+
+             <div id="previewWrap" class="resumes-preview" style="display:none;">
+                <div id="latexPreview" class="latex-preview"></div>
+              </div>
+
+            </div>
+
+            <div class="resumes-sideCard">
+              <h3>Quick Actions</h3>
+              <p class="muted">Save often. Iterations are snapshots.</p>
+              <ul class="resumes-bullets">
+                <li>Save master (global)</li>
+                <li>Pick a job, save an iteration</li>
+                <li>Load an iteration back into editor</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- Iterations -->
+      <section class="panel resumes-iterations">
+        <div class="panel-header">
+          <div>
+            <h2>Saved Iterations</h2>
+            <p class="muted" style="margin-top:6px;">
+              Save tailored versions for jobs you’ve applied to. Each save becomes a snapshot.
+            </p>
+          </div>
+        </div>
+
+        <div class="resumes-iterControls">
+          <label class="resumes-field">
+            <span class="muted">Application</span>
+            <select id="jobSelect"></select>
+          </label>
+
+          <label class="resumes-field">
+            <span class="muted">Label</span>
+            <input id="iterationLabel" placeholder="e.g., Applied v1 / Hiring manager tweak" />
+          </label>
+
+          <button id="btnSaveIteration" type="button">Save as Iteration</button>
+        </div>
+
+        <div id="iterationsEmpty" class="empty-state">No iterations yet. Save one to see it here.</div>
+        <div id="iterationsList" class="resumes-iterList" style="display:none;"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/src/services/resumes.js"></script>
+</body>
+</html>

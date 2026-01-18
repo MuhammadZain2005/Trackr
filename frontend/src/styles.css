@@ -1020,3 +1020,266 @@ textarea:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Resumes page enhancements ===== */
+.resumes-page .hero { margin-bottom: 18px; }
+
+.resumes-wrap {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 40px;
+}
+
+.resumes-master { padding-bottom: 18px; }
+
+.resumes-toolbar { display: flex; gap: 10px; align-items: center; }
+
+.resumes-editorShell {
+  display: grid;
+  grid-template-columns: 1.55fr 0.9fr;
+  gap: 16px;
+  margin-top: 14px;
+  align-items: start;
+}
+
+.resumes-editor {
+  width: 100%;
+  min-height: 560px;
+  resize: vertical;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.35);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  outline: none;
+}
+
+.resumes-editor:focus {
+  border-color: rgba(148, 163, 184, 0.45);
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
+}
+
+.resumes-side {
+  display: grid;
+  gap: 12px;
+}
+
+.resumes-sideCard {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(2, 6, 23, 0.22);
+  padding: 14px;
+}
+
+.resumes-sideCard h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.resumes-sideBtns {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0 10px;
+}
+
+.resumes-status {
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.resumes-preview {
+  margin-top: 12px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.resumes-preview iframe {
+  width: 100%;
+  height: 420px;
+  border: 0;
+}
+
+.resumes-bullets {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.resumes-iterControls {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+.resumes-field span { display: block; margin-bottom: 6px; }
+
+.resumes-iterList {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.resumes-iterCard {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(2, 6, 23, 0.18);
+  padding: 14px;
+}
+
+.resumes-iterTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.resumes-iterBtns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.resumes-iterPreview {
+  margin: 12px 0 0;
+  white-space: pre-wrap;
+  background: rgba(15, 23, 42, 0.28);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  padding: 12px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .resumes-editorShell { grid-template-columns: 1fr; }
+  .resumes-iterControls { grid-template-columns: 1fr; }
+}
+.latex-preview {
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b1220;
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 420px;
+}
+
+.latex-preview h1, .latex-preview h2, .latex-preview h3 { color: #0b1220; }
+
+:root {
+  color-scheme: light;
+  --bg: #e9f0ff;
+  --surface: #ffffff;
+  --surface-muted: #f7f9fc;
+
+  /* UPDATED: nicer, coordinated accent (indigo/purple instead of bright blue) */
+  --primary: #5b5df7;
+  --primary-dark: #2f2aa8;
+  --accent: #a6a8ff;
+
+  --text: #0b1220;
+  --muted: #5b667a;
+  --border: rgba(148, 163, 184, 0.35);
+  --danger: #d92d20;
+  --warning: #b54708;
+  --success: #067647;
+  --shadow: 0 30px 90px rgba(15, 23, 42, 0.12);
+  --shadow-soft: 0 14px 40px rgba(15, 23, 42, 0.08);
+  --radius: 28px;
+  --radius-sm: 16px;
+}
+
+/* UPDATED: make the page auto-fit screens more naturally */
+.page {
+  width: min(1320px, 100%);
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 34px) clamp(14px, 2.5vw, 22px) 64px;
+}
+
+/* UPDATED: adds the space between reminders section and tracker section */
+.layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 22px; /* <-- this is the spacing you asked for */
+}
+
+/* OPTIONAL (but looks nicer): tone down the primary stat gradient to match new accent */
+.stat-card.primary {
+  background: linear-gradient(135deg, var(--primary), rgba(166, 168, 255, 0.9));
+  color: #fff;
+  border: none;
+}
+/* make danger not inherit the primary (blue) button background */
+button.danger {
+  background: transparent;
+  border: 1px solid rgba(217, 45, 32, 0.28);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+button.danger:hover {
+  background: rgba(217, 45, 32, 0.08);
+  border-color: rgba(217, 45, 32, 0.45);
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+/* priority pills: same hue family, different intensity */
+.priority-low {
+  border-color: rgba(91, 93, 247, 0.22);
+  color: rgba(47, 49, 160, 0.9);
+  background: rgba(166, 168, 255, 0.22);
+}
+
+.priority-medium {
+  border-color: rgba(91, 93, 247, 0.35);
+  color: var(--primary-dark);
+  background: rgba(91, 93, 247, 0.14);
+}
+
+.priority-high {
+  border-color: rgba(47, 49, 160, 0.45);
+  color: #1b1c76;
+  background: rgba(47, 49, 160, 0.12);
+}
+.search-pill select {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+.board {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.card {
+  padding: 14px;
+  gap: 10px;
+}
+
+.card-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.meta-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.meta-dot {
+  opacity: 0.5;
+}
