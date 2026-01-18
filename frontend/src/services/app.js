@@ -116,6 +116,7 @@ createApp({
       sortBy: "updated",
       remindersWindow: 7,
       showArchived: false,
+      showTrackModal: false,
       communicationDrafts: {},
       storageError: "",
       copyMessage: "",
@@ -246,6 +247,12 @@ createApp({
         };
       }
     },
+    openTrackModal() {
+      this.showTrackModal = true;
+    },
+    closeTrackModal() {
+      this.showTrackModal = false;
+    },
     async restoreState() {
       try {
         const docSnap = await getDoc(doc(db, "users", "currentUser"));
@@ -300,6 +307,7 @@ createApp({
       this.ensureDraft(newApplication.id);
       this.resetForm();
       this.persistState();
+      this.closeTrackModal();
     },
     resetForm() {
       this.form = {
