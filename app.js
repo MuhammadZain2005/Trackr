@@ -111,6 +111,7 @@ Vue.createApp({
       sortBy: "updated",
       remindersWindow: 7,
       showArchived: false,
+      showTrackModal: false,
       communicationDrafts: {},
       storageError: "",
       copyMessage: "",
@@ -168,7 +169,9 @@ Vue.createApp({
       }
       if (this.sortBy === "followUp") {
         return apps.sort(
-          (a, b) => getDateValue(a.followUpDate, Infinity) - getDateValue(b.followUpDate, Infinity)
+          (a, b) =>
+            getDateValue(a.followUpDate, Infinity) -
+            getDateValue(b.followUpDate, Infinity)
         );
       }
       return apps.sort(
@@ -240,6 +243,12 @@ Vue.createApp({
         };
       }
     },
+    openTrackModal() {
+      this.showTrackModal = true;
+    },
+    closeTrackModal() {
+      this.showTrackModal = false;
+    },
     restoreState() {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -293,6 +302,7 @@ Vue.createApp({
       this.ensureDraft(newApplication.id);
       this.resetForm();
       this.persistState();
+      this.closeTrackModal();
     },
     resetForm() {
       this.form = {

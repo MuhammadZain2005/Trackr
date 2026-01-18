@@ -26,12 +26,11 @@
           </div>
 
           <nav class="nav">
-            <a href="index.html" class="nav-link is-active">Applications</a>
-            <a href="#" class="nav-link">Resumes</a>
-            <a href="#" class="nav-link">Reminders</a>
+            <a href="#applications" class="nav-link is-active">Applications</a>
+            <a href="#resume" class="nav-link">Resumes</a>
+            <a href="#reminders" class="nav-link">Reminders</a>
             <a href="profile.html" class="nav-link">Profile</a>
           </nav>
-
 
           <div class="topbar-actions">
             <button class="icon-button" type="button" aria-label="Notifications">
@@ -51,7 +50,6 @@
             <a href="profile.html" class="avatar" title="Profile & settings">
               <span>PC</span>
             </a>
-
           </div>
         </div>
 
@@ -143,88 +141,6 @@
       </section>
 
       <main class="layout">
-        <section class="panel" id="applications">
-          <h2>Track an application</h2>
-          <form class="form-grid" @submit.prevent="addApplication">
-            <label>
-              Company
-              <input
-                v-model.trim="form.company"
-                type="text"
-                placeholder="Northwind Labs"
-                required
-              />
-            </label>
-            <label>
-              Role
-              <input
-                v-model.trim="form.position"
-                type="text"
-                placeholder="Product Analyst"
-                required
-              />
-            </label>
-            <label>
-              Location
-              <input
-                v-model.trim="form.location"
-                type="text"
-                placeholder="Remote or City"
-              />
-            </label>
-            <label>
-              Source
-              <input
-                v-model.trim="form.source"
-                type="text"
-                placeholder="LinkedIn, Referral"
-              />
-            </label>
-            <label>
-              Date applied
-              <input v-model="form.dateApplied" type="date" required />
-            </label>
-            <label>
-              Follow-up date
-              <input v-model="form.followUpDate" type="date" />
-            </label>
-            <label>
-              Status
-              <select v-model="form.status">
-                <option v-for="status in statuses" :key="status" :value="status">
-                  {{ status }}
-                </option>
-              </select>
-            </label>
-            <label>
-              Priority
-              <select v-model="form.priority">
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-              </select>
-            </label>
-            <label class="span-2">
-              Notes
-              <textarea
-                v-model.trim="form.notes"
-                rows="3"
-                placeholder="Key requirements, recruiter info, next steps."
-              ></textarea>
-            </label>
-            <label class="span-2 checkbox">
-              <input v-model="form.useMasterResume" type="checkbox" />
-              Start tailored resume from the master version
-            </label>
-            <div class="row span-2">
-              <button type="submit">Add application</button>
-              <button class="ghost" type="button" @click="resetForm">
-                Reset
-              </button>
-            </div>
-          </form>
-        </section>
-
         <section class="panel" id="resume">
           <div class="panel-header">
             <h2>Master resume</h2>
@@ -286,9 +202,14 @@
           </div>
         </section>
 
-        <section class="panel span-2">
+        <section class="panel span-2" id="applications">
           <div class="panel-header">
-            <h2>Application tracker</h2>
+            <div class="panel-title">
+              <h2>Application tracker</h2>
+              <button class="ghost" type="button" @click="openTrackModal">
+                Track application
+              </button>
+            </div>
             <div class="panel-actions filters">
               <select v-model="statusFilter">
                 <option value="All">All statuses</option>
@@ -473,6 +394,120 @@
           </div>
         </section>
       </main>
+
+      <div
+        v-if="showTrackModal"
+        class="modal-overlay"
+        @click.self="closeTrackModal"
+      >
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="track-title"
+        >
+          <div class="modal-header">
+            <h2 id="track-title">Track an application</h2>
+            <button
+              class="icon-button ghost"
+              type="button"
+              @click="closeTrackModal"
+              aria-label="Close"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+          <form class="form-grid" @submit.prevent="addApplication">
+            <label>
+              Company
+              <input
+                v-model.trim="form.company"
+                type="text"
+                placeholder="Northwind Labs"
+                required
+              />
+            </label>
+            <label>
+              Role
+              <input
+                v-model.trim="form.position"
+                type="text"
+                placeholder="Product Analyst"
+                required
+              />
+            </label>
+            <label>
+              Location
+              <input
+                v-model.trim="form.location"
+                type="text"
+                placeholder="Remote or City"
+              />
+            </label>
+            <label>
+              Source
+              <input
+                v-model.trim="form.source"
+                type="text"
+                placeholder="LinkedIn, Referral"
+              />
+            </label>
+            <label>
+              Date applied
+              <input v-model="form.dateApplied" type="date" required />
+            </label>
+            <label>
+              Follow-up date
+              <input v-model="form.followUpDate" type="date" />
+            </label>
+            <label>
+              Status
+              <select v-model="form.status">
+                <option v-for="status in statuses" :key="status" :value="status">
+                  {{ status }}
+                </option>
+              </select>
+            </label>
+            <label>
+              Priority
+              <select v-model="form.priority">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </label>
+            <label class="span-2">
+              Notes
+              <textarea
+                v-model.trim="form.notes"
+                rows="3"
+                placeholder="Key requirements, recruiter info, next steps."
+              ></textarea>
+            </label>
+            <label class="span-2 checkbox">
+              <input v-model="form.useMasterResume" type="checkbox" />
+              Start tailored resume from the master version
+            </label>
+            <div class="row span-2">
+              <button type="submit">Add application</button>
+              <button class="ghost" type="button" @click="resetForm">
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       <footer class="footer">
         <p>
