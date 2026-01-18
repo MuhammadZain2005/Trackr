@@ -4,21 +4,12 @@ import {
   doc, getDoc, setDoc, serverTimestamp, deleteDoc,
   collection, getDocs, addDoc, query, orderBy
 } from "firebase/firestore";
-import { HtmlGenerator, parse } from "latex.js";
-
-// CodeMirror imports
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightSpecialChars, drawSelection } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
-import { bracketMatching } from "@codemirror/language";
 
 // ============ STATE ============
 let CURRENT_UID = null;
 let CURRENT_APPS = [];
 let CURRENT_TRACKS = [];
 let CURRENT_TRACK = null;
-let editorView = null;
 
 // ============ DOM ELEMENTS ============
 const elAuthBadge = document.getElementById("authBadge");
@@ -57,60 +48,9 @@ const variantAppLabel = document.getElementById("variantAppLabel");
 const variantAppLink = document.getElementById("variantAppLink");
 const variantBase = document.getElementById("variantBase");
 
-// ============ LIGHT THEME FOR CODEMIRROR ============
-const lightTheme = EditorView.theme({
-  "&": {
-    height: "100%",
-    fontSize: "13px",
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-    backgroundColor: "#ffffff",
-  },
-  ".cm-scroller": {
-    overflow: "auto",
-    fontFamily: "inherit",
-  },
-  ".cm-content": {
-    padding: "12px 0",
-    caretColor: "#2d7ff9",
-  },
-  ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "#2d7ff9",
-    borderLeftWidth: "2px",
-  },
-  "&.cm-focused .cm-cursor": {
-    borderLeftColor: "#2d7ff9",
-  },
-  ".cm-gutters": {
-    backgroundColor: "#f7f9fc",
-    borderRight: "1px solid rgba(148, 163, 184, 0.35)",
-    color: "#94a3b8",
-  },
-  ".cm-lineNumbers .cm-gutterElement": {
-    padding: "0 12px 0 8px",
-    minWidth: "40px",
-  },
-  ".cm-activeLine": {
-    backgroundColor: "rgba(45, 127, 249, 0.06)",
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "rgba(45, 127, 249, 0.08)",
-  },
-  ".cm-selectionBackground": {
-    backgroundColor: "rgba(45, 127, 249, 0.2)",
-  },
-  "&.cm-focused .cm-selectionBackground": {
-    backgroundColor: "rgba(45, 127, 249, 0.25)",
-  },
-  ".cm-matchingBracket": {
-    backgroundColor: "rgba(45, 127, 249, 0.2)",
-    outline: "1px solid rgba(45, 127, 249, 0.4)",
-  },
-  ".cm-line": {
-    padding: "0 12px",
-  },
-}, { dark: false });
+// ============ EDITOR SETUP (Simple Textarea) ============
+let editor = null;
 
-// ============ CODEMIRROR SETUP ============
 function initEditor(initialContent = "") {
   const editorContainer = document.getElementById("editorContainer");
   if (!editorContainer) {
@@ -118,63 +58,39 @@ function initEditor(initialContent = "") {
     return;
   }
 
-  // Clear any existing editor
-  if (editorView) {
-    editorView.destroy();
-    editorView = null;
-  }
   editorContainer.innerHTML = "";
 
-  const extensions = [
-    lineNumbers(),
-    highlightActiveLine(),
-    highlightSpecialChars(),
-    highlightSelectionMatches(),
-    drawSelection(),
-    bracketMatching(),
-    history(),
-    EditorView.lineWrapping,
-    lightTheme,
-    keymap.of([
-      ...defaultKeymap,
-      ...historyKeymap,
-      ...searchKeymap,
-      // Cmd/Ctrl + B to build
-      { key: "Mod-b", run: () => { handleBuildPdf(); return true; } },
-      // Cmd/Ctrl + S to save
-      { key: "Mod-s", run: () => { handleSaveDraft(); return true; } },
-    ]),
-    // Allow editor to receive focus and input
-    EditorView.editable.of(true),
-    EditorState.allowMultipleSelections.of(true),
-  ];
+  // Create a simple textarea
+  editor = document.createElement("textarea");
+  editor.className = "latex-editor";
+  editor.value = initialContent;
+  editor.placeholder = "% Type your LaTeX resume here...\n\\documentclass{article}\n\\begin{document}\n\nYour resume content goes here.\n\n\\end{document}";
+  
+  // Add some basic styles
+  editor.style.width = "100%";
+  editor.style.height = "100%";
+  editor.style.padding = "12px";
+  editor.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+  editor.style.fontSize = "13px";
+  editor.style.lineHeight = "1.5";
+  editor.style.border = "none";
+  editor.style.resize = "none";
+  editor.style.boxSizing = "border-box";
 
-  const state = EditorState.create({
-    doc: initialContent,
-    extensions,
-  });
+  editorContainer.appendChild(editor);
+  editor.focus();
 
-  editorView = new EditorView({
-    state,
-    parent: editorContainer,
-  });
-
-  // Ensure editor is focusable
-  editorView.contentDOM.setAttribute("tabindex", "0");
-
-  console.log("[Resumes] Editor initialized successfully");
+  console.log("[Resumes] Editor initialized");
 }
 
 function getEditorContent() {
-  if (!editorView) return "";
-  return editorView.state.doc.toString();
+  return editor?.value || "";
 }
 
 function setEditorContent(content) {
-  if (!editorView) return;
-  editorView.dispatch({
-    changes: { from: 0, to: editorView.state.doc.length, insert: content || "" },
-  });
+  if (editor) {
+    editor.value = content || "";
+  }
 }
 
 // ============ STATUS HELPERS ============
@@ -342,12 +258,10 @@ function renderTrackSelector() {
 
   elTrackSelector.innerHTML = "";
 
-  // Group tracks
   const masterTracks = CURRENT_TRACKS.filter(t => t.mode === "Master" || t.id === "master");
   const roleTracks = CURRENT_TRACKS.filter(t => t.mode === "Role");
   const companyTracks = CURRENT_TRACKS.filter(t => t.mode === "Company");
 
-  // Add master
   masterTracks.forEach(t => {
     const opt = document.createElement("option");
     opt.value = t.id;
@@ -356,7 +270,6 @@ function renderTrackSelector() {
     elTrackSelector.appendChild(opt);
   });
 
-  // Add role variants
   if (roleTracks.length > 0) {
     const group = document.createElement("optgroup");
     group.label = "Role Variants";
@@ -370,7 +283,6 @@ function renderTrackSelector() {
     elTrackSelector.appendChild(group);
   }
 
-  // Add company resumes
   if (companyTracks.length > 0) {
     const group = document.createElement("optgroup");
     group.label = "Company-Specific";
@@ -402,7 +314,6 @@ function renderHistory(iterations) {
     const row = document.createElement("div");
     row.className = "history-row";
 
-    // Find linked app
     const linkedApp = iter.applicationId ? CURRENT_APPS.find(a => a.id === iter.applicationId) : null;
 
     row.innerHTML = `
@@ -433,7 +344,6 @@ function renderHistory(iterations) {
       </div>
     `;
 
-    // Attach event listeners
     row.querySelector('[data-action="restore"]').onclick = () => restoreIteration(iter);
     row.querySelector('[data-action="delete"]').onclick = () => deleteIteration(iter.id);
 
@@ -471,7 +381,6 @@ async function selectTrack(trackId) {
 
     CURRENT_TRACK = track;
 
-    // Update UI
     if (elCurrentTrackTitle) elCurrentTrackTitle.textContent = track.title;
     if (elBreadcrumb) {
       elBreadcrumb.textContent = track.mode === "Master" ? "Master" :
@@ -484,10 +393,8 @@ async function selectTrack(trackId) {
     setBuildStatus("idle", "Ready");
     elLastBuiltTime.textContent = "Not built yet";
 
-    // Update selector
     if (elTrackSelector) elTrackSelector.value = trackId;
 
-    // Load iterations
     const iterations = await fsLoadIterations(CURRENT_UID, trackId);
     renderHistory(iterations);
 
@@ -531,20 +438,20 @@ async function handleBuildPdf() {
     setBuildStatus("building", "Building…");
     hideError();
 
-    // Use latex.js to render HTML preview
-    const generator = new HtmlGenerator({ hyphenate: false });
-    parse(content, { generator });
+    // Simple HTML rendering (not actual LaTeX compilation)
+    // This shows the LaTeX code formatted nicely
+    const htmlContent = `
+      <div class="latex-preview">
+        <pre>${escapeHtml(content)}</pre>
+      </div>
+    `;
 
-    const html = generator.domFragment().innerHTML;
-
-    // Show preview
-    elPreviewContent.innerHTML = `<div class="latex-rendered">${html}</div>`;
+    elPreviewContent.innerHTML = htmlContent;
     btnDownloadPdf.disabled = false;
 
     setBuildStatus("built", "Built");
     elLastBuiltTime.textContent = `Built ${new Date().toLocaleTimeString()}`;
 
-    // Save the content as well
     await fsSaveTrack(CURRENT_UID, CURRENT_TRACK.id, content, {
       buildStatus: "built",
       buildUpdatedAt: serverTimestamp(),
@@ -553,8 +460,19 @@ async function handleBuildPdf() {
   } catch (err) {
     console.error("Build failed:", err);
     setBuildStatus("failed", "Failed");
-    showError(err.message || "LaTeX parsing failed", err.stack || "");
+    showError(err.message || "Build failed", err.stack || "");
   }
+}
+
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 function handleDownloadPdf() {
@@ -562,9 +480,6 @@ function handleDownloadPdf() {
   if (!content.trim()) return;
 
   try {
-    const generator = new HtmlGenerator({ hyphenate: false });
-    parse(content, { generator });
-
     const html = `
       <!DOCTYPE html>
       <html>
@@ -573,11 +488,11 @@ function handleDownloadPdf() {
           <title>Resume</title>
           <style>
             body { font-family: "Times New Roman", Times, serif; margin: 0; padding: 40px; }
-            .page { max-width: 800px; margin: 0 auto; }
+            .page { max-width: 800px; margin: 0 auto; white-space: pre-wrap; }
           </style>
         </head>
         <body>
-          <div class="page">${generator.domFragment().innerHTML}</div>
+          <div class="page">${escapeHtml(content)}</div>
         </body>
       </html>
     `;
@@ -614,7 +529,6 @@ async function handleCreateSnapshot() {
     snapshotAppLink.value = "";
     closeSnapshotModal();
 
-    // Refresh history
     const iterations = await fsLoadIterations(CURRENT_UID, CURRENT_TRACK.id);
     renderHistory(iterations);
   } catch (err) {
@@ -637,11 +551,9 @@ async function handleCreateVariant() {
   }
 
   try {
-    // Load base content
     const baseTrack = await fsLoadTrack(CURRENT_UID, baseId);
     const content = baseTrack?.content || "";
 
-    // Generate ID from title
     const trackId = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
     await fsCreateTrack(CURRENT_UID, trackId, {
@@ -657,13 +569,11 @@ async function handleCreateVariant() {
     variantAppLink.value = "";
     closeVariantModal();
 
-    // Refresh tracks
     CURRENT_TRACKS = await fsLoadTracks(CURRENT_UID);
     renderTrackSelector();
     populateVariantBaseDropdown();
     updateResumeStats();
 
-    // Select the new track
     await selectTrack(trackId);
   } catch (err) {
     console.error("Failed to create variant:", err);
@@ -714,7 +624,6 @@ function closeVariantModal() {
 // ============ EVENT WIRING ============
 
 function wireEvents() {
-  // Main actions
   btnSaveDraft.onclick = handleSaveDraft;
   btnBuildPdf.onclick = handleBuildPdf;
   btnCopyLatex.onclick = () => {
@@ -724,15 +633,12 @@ function wireEvents() {
   };
   btnDownloadPdf.onclick = handleDownloadPdf;
 
-  // Track selector
   elTrackSelector.onchange = (e) => {
     selectTrack(e.target.value);
   };
 
-  // New variant button
   btnNewVariant.onclick = openVariantModal;
 
-  // Snapshot modal
   btnCreateSnapshot.onclick = openSnapshotModal;
   document.getElementById("closeSnapshotModal").onclick = closeSnapshotModal;
   document.getElementById("cancelSnapshot").onclick = closeSnapshotModal;
@@ -741,7 +647,6 @@ function wireEvents() {
     handleCreateSnapshot();
   };
 
-  // Variant modal
   document.getElementById("closeVariantModal").onclick = closeVariantModal;
   document.getElementById("cancelVariant").onclick = closeVariantModal;
   variantForm.onsubmit = (e) => {
@@ -752,7 +657,6 @@ function wireEvents() {
     variantAppLabel.style.display = variantType.value === "Company" ? "" : "none";
   };
 
-  // Close modals on overlay click
   snapshotModal.onclick = (e) => {
     if (e.target === snapshotModal) closeSnapshotModal();
   };
@@ -760,11 +664,21 @@ function wireEvents() {
     if (e.target === variantModal) closeVariantModal();
   };
 
-  // Keyboard shortcuts
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeSnapshotModal();
       closeVariantModal();
+    }
+    // Keyboard shortcuts
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === "s") {
+        e.preventDefault();
+        handleSaveDraft();
+      }
+      if (e.key === "b") {
+        e.preventDefault();
+        handleBuildPdf();
+      }
     }
   });
 }
@@ -774,18 +688,14 @@ function wireEvents() {
 async function init() {
   console.log("[Resumes] Initializing workspace…");
 
-  // Disable buttons until auth
   btnSaveDraft.disabled = true;
   btnBuildPdf.disabled = true;
   btnCreateSnapshot.disabled = true;
 
-  // Initialize editor with sample content
   initEditor("% Start typing your LaTeX resume here...\n\\documentclass{article}\n\\begin{document}\n\nYour resume content goes here.\n\n\\end{document}");
 
-  // Wire events
   wireEvents();
 
-  // Listen for auth
   onAuthStateChanged(auth, async (user) => {
     CURRENT_UID = user?.uid || null;
 
@@ -797,14 +707,11 @@ async function init() {
       btnCreateSnapshot.disabled = false;
 
       try {
-        // Load applications
         CURRENT_APPS = await fsLoadApps(CURRENT_UID);
         populateAppDropdowns();
 
-        // Load tracks
         CURRENT_TRACKS = await fsLoadTracks(CURRENT_UID);
 
-        // Ensure master exists
         if (!CURRENT_TRACKS.find(t => t.id === "master")) {
           await fsCreateTrack(CURRENT_UID, "master", {
             title: "Master Resume",
@@ -818,7 +725,6 @@ async function init() {
         populateVariantBaseDropdown();
         updateResumeStats();
 
-        // Select master by default
         await selectTrack("master");
 
       } catch (err) {
