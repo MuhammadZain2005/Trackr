@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const applicationController = require('../controllers/application.controller');
-const statusController = require('../controllers/status.controller');
+const applicationController = require('../controllers/applicationController');
+const statusController = require('../controllers/statusController');
 
 router.post('/', applicationController.createApplication);
 router.get('/', applicationController.getAllApplications);

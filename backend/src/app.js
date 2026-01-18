@@ -1,23 +1,23 @@
 const express = require('express');
 const cors = require('cors');
-const routes = require('./routes/index.routes');
-const errorHandler = require('./middlewares/error.middleware');
+const routes = require('./routes/indexRoutes');
+const logger = require('./middlewares/loggerMiddleware');
+const notFound = require('./middlewares/notFoundMiddleware');
+const errorHandler = require('./middlewares/errorMiddleware');
+const healthController = require('./controllers/healthController');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(logger);
 
-app.get('/api/health', (req, res) => {
-    res.json({
-        success: true,
-        status: 'healthy',
-        timestamp: new Date().toISOString()
-    });
-});
+app.get('/api/health', healthController.check);
 
 app.use('/api', routes);
+
+app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;

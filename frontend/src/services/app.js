@@ -24,6 +24,10 @@ Skills
 - Interview scheduling
 - Talent pipeline reporting`;
 
+import { db } from './firebase.js'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { createApp } from 'vue'
+
 const sampleApplications = [
   {
     id: createId(),
@@ -88,8 +92,6 @@ const sampleApplications = [
     archived: false,
   },
 ];
-
-import { createApp } from 'vue'
 
 createApp({
   data() {
@@ -240,17 +242,18 @@ createApp({
           date: todayDate(),
           type: "Email",
           summary: "",
+          _open: false,
         };
       }
     },
-    restoreState() {
+    async restoreState() {
       try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          this.masterResume = parsed.masterResume || defaultMasterResume;
-          this.applications = Array.isArray(parsed.applications)
-            ? parsed.applications.map(this.normalizeApplication)
+        const docSnap = await getDoc(doc(db, "users", "currentUser"));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          this.masterResume = data.masterResume || defaultMasterResume;
+          this.applications = Array.isArray(data.applications)
+            ? data.applications.map(this.normalizeApplication)
             : [];
         } else {
           this.applications = [];
@@ -258,22 +261,23 @@ createApp({
         this.applications.forEach((app) => {
           this.ensureDraft(app.id);
         });
+        this.storageError = "";
       } catch (error) {
-        this.storageError =
-          "Unable to load saved data. Local storage may be unavailable.";
+        console.error("Firebase restore error:", error);
+        this.storageError = "Unable to load from Firebase: " + error.message;
       }
     },
-    persistState() {
+    async persistState() {
       try {
         const payload = {
           masterResume: this.masterResume,
           applications: this.applications,
         };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        await setDoc(doc(db, "users", "currentUser"), payload);
         this.storageError = "";
       } catch (error) {
-        this.storageError =
-          "Unable to save. Storage limit may be reached in this browser.";
+        console.error("Firebase persist error:", error);
+        this.storageError = "Unable to save to Firebase: " + error.message;
       }
     },
     addApplication() {
