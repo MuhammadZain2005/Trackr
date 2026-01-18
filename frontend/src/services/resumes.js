@@ -3,6 +3,7 @@ import {
   doc, getDoc, setDoc, serverTimestamp, deleteDoc,
   collection, getDocs, addDoc, query, orderBy
 } from "firebase/firestore";
+import { initOfflineAIChatbot } from "./ai-chatbot-offline.js";
 
 // ============ STATE ============
 let CURRENT_UID = null;
@@ -682,6 +683,12 @@ async function init() {
   btnCreateSnapshot.disabled = false;
 
   initEditor("% Start typing your LaTeX resume here...\n\\documentclass{article}\n\\begin{document}\n\nYour resume content goes here.\n\n\\end{document}");
+
+  // Initialize Offline AI Chatbot (100% local - no internet needed!)
+  setTimeout(() => {
+    initOfflineAIChatbot(editor);
+    console.log("[AI] Offline chatbot initialized");
+  }, 100);
 
   wireEvents();
 
